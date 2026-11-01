@@ -168,6 +168,45 @@ describe('schema: 跨字段契约', () => {
 		).toThrow(/password/)
 	})
 
+	it('closed shadow 点击必须带 position（host + offset 降级策略）', () => {
+		const closed = ref()
+		closed.observed.shadowRootType = 'closed'
+		closed.observed.innerOffset = { x: 110, y: 80 }
+		const step = {
+			kind: 'click' as const,
+			id: 's',
+			target: closed,
+			button: 'left' as const,
+			clickCount: 1,
+			modifiers: [],
+		}
+		expect(() => parseFlow(flow({ steps: [step] }))).toThrow(/closed shadow 目标必须带 position/)
+		const withPos = { ...step, position: { x: 110, y: 80 } }
+		const parsed = parseFlow(flow({ steps: [withPos] }))
+		expect(parsed.steps[0]).toMatchObject({ kind: 'click', position: { x: 110, y: 80 } })
+	})
+
+	it('canvas 这类坐标点击可带 position', () => {
+		const canvas = ref()
+		canvas.observed.tag = 'canvas'
+		const parsed = parseFlow(
+			flow({
+				steps: [
+					{
+						kind: 'click',
+						id: 's',
+						target: canvas,
+						button: 'left',
+						clickCount: 1,
+						modifiers: [],
+						position: { x: 40, y: 30 },
+					},
+				],
+			}),
+		)
+		expect(parsed.steps[0]).toMatchObject({ kind: 'click', position: { x: 40, y: 30 } })
+	})
+
 	it('password 输入用模板时通过', () => {
 		const pwdRef = ref()
 		pwdRef.observed.attributes = { type: 'password' }

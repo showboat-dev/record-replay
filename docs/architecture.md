@@ -53,6 +53,11 @@ export interface RecordOptions {
 	keepRaw?: boolean // 保留原始事件流到 .raw.json（调试用）
 	onStep?: (step: Step) => void // 用于 CLI 打印时间线
 	stopSignal?: AbortSignal
+	/**
+	 * 自动化驱动：给了它就不等人工操作（e2e / 批量录制用）。
+	 * 回调拿到 page 与 stop()；回调 resolve 后自动 stop 并落盘。
+	 */
+	drive?: (page: Page, stop: () => void) => Promise<void>
 }
 
 export interface RecordResult {
@@ -255,3 +260,12 @@ pnpm site           # 启动 fixture 站（5173/5174）
 pnpm rr --help      # CLI 可用
 pnpm harness        # 回归报告（M2 之后才有意义）
 ```
+
+## 10. Spike 结论对实现的约束（必须先读 docs/spikes.md）
+
+| 场景 | 结论 | 落地方式 |
+|---|---|---|
+| closed shadow 内层元素 | CDP 能识别内层节点（`getNodeForLocation` / `getDocument({pierce:true})`），但 backendNodeId 不可跨 reload，Playwright selector 与 aria snapshot 都看不见它 | 录制：target=host 的 ElementRef + `observed.shadowRootType:'closed'` + `observed.innerOffset`（取事件 `offsetX/offsetY`）；click 带 `position` 回放 |
+| CDP 坐标 | 一律 **CSS px**，不乘 dpr | `DOM.getNodeForLocation` / `Input.dispatchMouseEvent` 直接用 CSS 坐标 |
+| iframe 内 aria ref | `page.getByRef('f1e2')` 可直达（同源/跨域/嵌套）；ref 仅对"该 frame 最近一次 ai 快照"有效；导航后前缀变化 | L4 修复拿到 ref 后立即 `getByRef(ref).normalize()` 再执行；期间不得再 `ariaSnapshot()`；`Invalid frame in aria-ref selector` 归类为可重试 |
+| closed shadow 与 AI | aria snapshot 完全不包含 closed shadow 内容 | 这类目标跳过 AI 调用，直接 host+position 降级 |

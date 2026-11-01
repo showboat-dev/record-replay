@@ -61,6 +61,10 @@ export const ObservedFactsSchema = z.object({
 	viewport: z.object({ width: z.number(), height: z.number() }),
 	dpr: z.number().default(1),
 	recordedAt: z.number().int(),
+	/** 目标位于 open/closed shadow 内。closed 时 Playwright/aria 都进不去，回放只能 host + innerOffset */
+	shadowRootType: z.enum(['open', 'closed']).optional(),
+	/** closed shadow 内层元素相对 host padding box 的 CSS px 偏移（取自事件 offsetX/offsetY） */
+	innerOffset: z.object({ x: z.number(), y: z.number() }).optional(),
 })
 export type ObservedFacts = z.infer<typeof ObservedFactsSchema>
 
@@ -147,6 +151,8 @@ const clickStep = BaseStepSchema.extend({
 	button: z.enum(['left', 'right', 'middle']).default('left'),
 	clickCount: z.number().int().min(1).max(3).default(1),
 	modifiers: z.array(z.enum(['Alt', 'Control', 'Meta', 'Shift'])).default([]),
+	/** 点击位置：相对 target padding box 的 CSS px（closed shadow / canvas / 坐标兜底） */
+	position: z.object({ x: z.number(), y: z.number() }).optional(),
 })
 
 const inputStep = BaseStepSchema.extend({
@@ -374,9 +380,19 @@ export function validateFlowContract(flow: Flow): string[] {
 	const visitStep = (step: Step, where: string): void => {
 		switch (step.kind) {
 			case 'click':
-			case 'hover':
+			case 'hover': {
 				visitRef(step.target, `${where}.target`)
+				if (
+					step.kind === 'click' &&
+					step.target.observed.shadowRootType === 'closed' &&
+					!step.position
+				) {
+					errors.push(
+						`${where}: closed shadow 目标必须带 position（host + offset），否则回放无法命中内层元素`,
+					)
+				}
 				break
+			}
 			case 'input': {
 				visitRef(step.target, `${where}.target`)
 				const type = step.target.observed.attributes['type']
