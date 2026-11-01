@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxj4cou_m8p4ac",
+  "title": "/spa",
+  "version": 1,
+  "createdAt": "2026-11-01T07:49:23.148Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5173/spa#/list",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "http://127.0.0.1:5173/spa"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "spa-nav-detail",
+            "data-testid": "spa-nav-detail"
+          },
+          "text": "#/detail 详情视图",
+          "rect": {
+            "x": 464.33,
+            "y": 181.77,
+            "width": 145.14,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519362995
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "spa-nav-detail",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "#/detail 详情视图",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "#/detail 详情视图",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "#/detail 详情视图",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#spa-nav-detail",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "#/detail 详情视图",
+          "attrs": {
+            "type": "button",
+            "id": "spa-nav-detail",
+            "data-testid": "spa-nav-detail"
+          },
+          "stableHash": "2d346befe8f2d3fbbb51ac32bb0b2360afa9b860",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #spa-nav-detail [testid=spa-nav-detail] role=button name=\"#/detail 详情视图\"",
+        "nearbyText": [
+          "#/list 列表视图",
+          "视图导航"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s2",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "http://127.0.0.1:5173/spa"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "spa-nav-list",
+            "data-testid": "spa-nav-list"
+          },
+          "text": "#/list 列表视图",
+          "rect": {
+            "x": 327,
+            "y": 181.77,
+            "width": 127.33,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519363067
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "spa-nav-list",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "#/list 列表视图",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "#/list 列表视图",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "#/list 列表视图",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#spa-nav-list",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "#/list 列表视图",
+          "attrs": {
+            "type": "button",
+            "id": "spa-nav-list",
+            "data-testid": "spa-nav-list"
+          },
+          "stableHash": "f3493d4385b0844fa03bf4986ec8efbab62735a9",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #spa-nav-list [testid=spa-nav-list] role=button name=\"#/list 列表视图\"",
+        "nearbyText": [
+          "视图导航",
+          "#/detail 详情视图"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

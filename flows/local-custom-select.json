@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxj49ph_3olqmr",
+  "title": "/custom-select",
+  "version": 1,
+  "createdAt": "2026-11-01T07:49:22.095Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5173/custom-select",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "cs-trigger",
+            "role": "combobox",
+            "aria-haspopup": "listbox",
+            "aria-expanded": "false",
+            "aria-controls": "cs-popup",
+            "aria-label": "选择城市，当前：上海",
+            "data-testid": "cs-trigger"
+          },
+          "text": "上海",
+          "rect": {
+            "x": 327,
+            "y": 220.19,
+            "width": 320,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519358988
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "cs-trigger",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "combobox",
+              "name": "选择城市，当前：上海",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "combobox",
+              "name": "选择城市，当前：上海",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "选择城市，当前：上海",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#cs-trigger",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "combobox",
+          "accessibleName": "选择城市，当前：上海",
+          "attrs": {
+            "type": "button",
+            "id": "cs-trigger",
+            "role": "combobox",
+            "aria-label": "选择城市，当前：上海",
+            "data-testid": "cs-trigger"
+          },
+          "stableHash": "f8a038ef25b23c7a9d5bd4921cd4735dcc3dc8e9",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #cs-trigger [testid=cs-trigger] role=combobox name=\"选择城市，当前：上海\"",
+        "nearbyText": [
+          "上海 北京 深圳 杭州"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s2",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "div",
+            "attributes": {
+              "id": "cs-result",
+              "role": "status",
+              "aria-live": "polite",
+              "data-testid": "cs-result"
+            },
+            "text": "已选择: 上海（value=shanghai）",
+            "rect": {
+              "x": 327,
+              "y": 311.58,
+              "width": 786,
+              "height": 45.25
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793519362084
+          },
+          "candidates": [
+            {
+              "kind": "testid",
+              "value": "cs-result",
+              "score": 10,
+              "source": "record"
+            },
+            {
+              "kind": "role",
+              "value": {
+                "role": "status"
+              },
+              "score": 46,
+              "source": "record"
+            },
+            {
+              "kind": "text",
+              "value": "已选择: 上海（value=shanghai）",
+              "score": 70,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "#cs-result",
+              "score": 100,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[2]/*[1]/*[5]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "div",
+            "role": "status",
+            "attrs": {
+              "id": "cs-result",
+              "role": "status",
+              "data-testid": "cs-result"
+            },
+            "stableHash": "46f402006c4502ffc1359cbfcf1746e786c97514",
+            "nodePath": [
+              1,
+              1,
+              0,
+              4
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "div #cs-result [testid=cs-result] role=status text=\"已选择: 上海（value=shanghai）\""
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "li",
+          "attributes": {
+            "id": "cs-opt-shanghai",
+            "role": "option",
+            "data-value": "shanghai",
+            "aria-selected": "true",
+            "data-selected": "true"
+          },
+          "text": "上海",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519359069
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "option"
+            },
+            "score": 46,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "上海",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#cs-opt-shanghai",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "li",
+          "role": "option",
+          "attrs": {
+            "id": "cs-opt-shanghai",
+            "role": "option",
+            "data-value": "shanghai",
+            "data-selected": "true"
+          },
+          "stableHash": "8102dba237923540fe880ac4a2db42def3123ca8",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "li #cs-opt-shanghai role=option text=\"上海\"（候选未能唯一命中，已保留启发式顺序）",
+        "nearbyText": [
+          "城市选项",
+          "北京"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}
