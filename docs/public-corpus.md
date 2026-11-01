@@ -5,42 +5,42 @@
 
 ## 1. 结论
 
-| 指标 | 结果 |
-|---|---|
-| 站点数 | 10（覆盖电商、企业后台、表单、动态列表、CMS 搜索、组件库、文档站） |
-| Flow 总步数 | 51 步 |
-| 最终结果（每站 3 次回放） | **20/30 runs 通过（66.7%）**，**6/10 站点全绿** |
-| 优化前（每站 5 次回放，未修复） | 20/50（40%），4/10 站点全绿 |
-| 修复后提升 | +26.7pp |
+| 指标                            | 结果                                                               |
+| ------------------------------- | ------------------------------------------------------------------ |
+| 站点数                          | 10（覆盖电商、企业后台、表单、动态列表、CMS 搜索、组件库、文档站） |
+| Flow 总步数                     | 51 步                                                              |
+| 最终结果（每站 3 次回放）       | **20/30 runs 通过（66.7%）**，**6/10 站点全绿**                    |
+| 优化前（每站 5 次回放，未修复） | 20/50（40%），4/10 站点全绿                                        |
+| 修复后提升                      | +26.7pp                                                            |
 
 > 结论：**结构清晰、交互确定的站点（电商/表单/列表/组件库）已达到全绿；SPA 首屏、慢站点、搜索结果页导航仍不稳。**
 > 真实站点暴露的问题比本地 fixture 多一个量级，这批 flow 直接作为 M2 的回归基线。
 
 ## 2. 逐站结果（每站 3 次回放）
 
-| 站点 | 链路 | 步数 | 结果 | 命中级别 |
-|---|---|---|---|---|
-| saucedemo | 登录→加购 2 件→购物车→结算→完成 | 12 | ✅ 3/3 | L1 |
-| demoqa-form | 长表单（文本/单选/日期/下拉/提交弹窗） | 8 | ✅ 3/3 | L1 |
-| selenium-web-form | 官方表单页（文本/密码/下拉/复选/单选/提交） | 5 | ✅ 3/3 | L1 |
-| todomvc | 动态列表：新增 3 条/勾选/筛选 Active/Completed | 9 | ✅ 3/3 | L1 |
-| playwright-dev | 文档站：首页→Docs→API 页 | 2 | ✅ 3/3 | L1 |
-| mui-autocomplete | MUI 自动完成：输入过滤→选中 | 3 | ✅ 3/3 | L1 |
-| antd-select | AntD 假下拉：打开→选项 | 2 | ⚠️ 2/3 | L1（1 次 SPA 时序失败） |
-| wikipedia | 搜索→打开条目→页内导航 | 4 | ❌ 0/3 | s3 期望不符 / s4 歧义 |
-| element-plus-select | Element Plus 假下拉 | 2 | ❌ 0/3 | 首屏未挂载（等待 5s 仍 0 候选） |
-| orangehrm | 企业后台：登录→仪表盘→My Info→联系信息 | 6 | ❌ 0/3 | startUrl 导航失败（demo 站极慢） |
+| 站点                | 链路                                           | 步数 | 结果   | 命中级别                         |
+| ------------------- | ---------------------------------------------- | ---- | ------ | -------------------------------- |
+| saucedemo           | 登录→加购 2 件→购物车→结算→完成                | 12   | ✅ 3/3 | L1                               |
+| demoqa-form         | 长表单（文本/单选/日期/下拉/提交弹窗）         | 8    | ✅ 3/3 | L1                               |
+| selenium-web-form   | 官方表单页（文本/密码/下拉/复选/单选/提交）    | 5    | ✅ 3/3 | L1                               |
+| todomvc             | 动态列表：新增 3 条/勾选/筛选 Active/Completed | 9    | ✅ 3/3 | L1                               |
+| playwright-dev      | 文档站：首页→Docs→API 页                       | 2    | ✅ 3/3 | L1                               |
+| mui-autocomplete    | MUI 自动完成：输入过滤→选中                    | 3    | ✅ 3/3 | L1                               |
+| antd-select         | AntD 假下拉：打开→选项                         | 2    | ⚠️ 2/3 | L1（1 次 SPA 时序失败）          |
+| wikipedia           | 搜索→打开条目→页内导航                         | 4    | ❌ 0/3 | s3 期望不符 / s4 歧义            |
+| element-plus-select | Element Plus 假下拉                            | 2    | ❌ 0/3 | 首屏未挂载（等待 5s 仍 0 候选）  |
+| orangehrm           | 企业后台：登录→仪表盘→My Info→联系信息         | 6    | ❌ 0/3 | startUrl 导航失败（demo 站极慢） |
 
 ## 3. 本轮测试暴露并修复的问题
 
-| # | 问题 | 修复 | 影响 |
-|---|---|---|---|
-| 1 | **SPA 首屏空窗**：resolve 立刻 `count()` 得 0 就失败（OrangeHRM/Element Plus 全挂的直接原因之一） | resolver 增加 `waitForLoadState('domcontentloaded')` + 候选出现轮询（`elementWaitMs`，默认 5s） | 所有 SPA 站点 |
-| 2 | **expect 推断过激**：对 `li`/`a`/`button`/0 尺寸节点推断 `elementVisible`，动态列表/下拉场景必然 flaky（TodoMVC s7 5/5 失败） | 收窄为**白名单**：只有 `dialog/h1-h6/output` 或 `alert/status/dialog/alertdialog` 参与推断 | TodoMVC 0/5 → 3/3 |
-| 3 | **tsx/esbuild keepNames**：`page.evaluate` 序列化的函数体里带 `__name(...)`，页面内 `ReferenceError`，真实站点 L2 全挂（上一轮已修，本轮验证） | resolver/executor/recorder 注入页面级垫片 | L2 降级可用 |
-| 4 | secret 变量：密码被 masking 成 `{{password}}`，回放缺变量会 `VARIABLE_MISSING` | CLI `--var`、harness `RR_VAR_*`、语料库按站配置 `vars` | Selenium 表单 0/5 → 3/3 |
-| 5 | 假下拉的「点击触发→点选项」间隔太短，录制容易只留下一次点击 | 录制脚本内加 700ms 等待；antd 修复后 5/5（3 run 模式下 2/3 属时序抖动） | AntD/Element Plus 类组件 |
-| 6 | 慢站点默认 15s 单步超时不够 | 语料库支持 per-site `timeoutMs` | demoqa/orangehrm |
+| #   | 问题                                                                                                                                           | 修复                                                                                            | 影响                     |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------ |
+| 1   | **SPA 首屏空窗**：resolve 立刻 `count()` 得 0 就失败（OrangeHRM/Element Plus 全挂的直接原因之一）                                              | resolver 增加 `waitForLoadState('domcontentloaded')` + 候选出现轮询（`elementWaitMs`，默认 5s） | 所有 SPA 站点            |
+| 2   | **expect 推断过激**：对 `li`/`a`/`button`/0 尺寸节点推断 `elementVisible`，动态列表/下拉场景必然 flaky（TodoMVC s7 5/5 失败）                  | 收窄为**白名单**：只有 `dialog/h1-h6/output` 或 `alert/status/dialog/alertdialog` 参与推断      | TodoMVC 0/5 → 3/3        |
+| 3   | **tsx/esbuild keepNames**：`page.evaluate` 序列化的函数体里带 `__name(...)`，页面内 `ReferenceError`，真实站点 L2 全挂（上一轮已修，本轮验证） | resolver/executor/recorder 注入页面级垫片                                                       | L2 降级可用              |
+| 4   | secret 变量：密码被 masking 成 `{{password}}`，回放缺变量会 `VARIABLE_MISSING`                                                                 | CLI `--var`、harness `RR_VAR_*`、语料库按站配置 `vars`                                          | Selenium 表单 0/5 → 3/3  |
+| 5   | 假下拉的「点击触发→点选项」间隔太短，录制容易只留下一次点击                                                                                    | 录制脚本内加 700ms 等待；antd 修复后 5/5（3 run 模式下 2/3 属时序抖动）                         | AntD/Element Plus 类组件 |
+| 6   | 慢站点默认 15s 单步超时不够                                                                                                                    | 语料库支持 per-site `timeoutMs`                                                                 | demoqa/orangehrm         |
 
 ## 4. 仍未解决的问题（M2 输入）
 
@@ -59,12 +59,12 @@
 
 ## 6. 复测（加了 href/class 候选 + startUrl 重试之后）
 
-| 站点 | 3 runs | 说明 |
-|---|---|---|
-| saucedemo / demoqa-form / selenium-web-form / todomvc / playwright-dev / mui-autocomplete | ✅ 3/3 | L1 |
-| orangehrm | ⚠️ 2/3 | startUrl 重试后从 0/3 提升；demo 站仍偶尔 40s+ |
-| antd-select / element-plus-select | ❌ 0/3 | 组件库「组件画廊」页面固有难题：同页 27 个同构下拉，录制目标是无属性 div / 动态 id input |
-| wikipedia | ❌ 0/3 | s3 点击搜索结果后未导航（expect 抓住了），s4 同文本多链接歧义 |
+| 站点                                                                                      | 3 runs | 说明                                                                                     |
+| ----------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
+| saucedemo / demoqa-form / selenium-web-form / todomvc / playwright-dev / mui-autocomplete | ✅ 3/3 | L1                                                                                       |
+| orangehrm                                                                                 | ⚠️ 2/3 | startUrl 重试后从 0/3 提升；demo 站仍偶尔 40s+                                           |
+| antd-select / element-plus-select                                                         | ❌ 0/3 | 组件库「组件画廊」页面固有难题：同页 27 个同构下拉，录制目标是无属性 div / 动态 id input |
+| wikipedia                                                                                 | ❌ 0/3 | s3 点击搜索结果后未导航（expect 抓住了），s4 同文本多链接歧义                            |
 
 **结论**：普通业务系统形态（电商/表单/列表/文档站）稳定；组件库演示页和企业 demo 站属于环境/结构极端 case，不再投入调优，改为 M2 的「录制后自检 + needsReview」兜底。
 

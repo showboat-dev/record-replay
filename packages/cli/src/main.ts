@@ -75,6 +75,9 @@ async function main(): Promise<void> {
 		case 'studio':
 			await studioCmd(argv.slice(1))
 			return
+		case 'suggest':
+			await suggestCmd(argv.slice(1))
+			return
 		default:
 			usageError(`未知命令 "${command}"`)
 	}
@@ -310,6 +313,49 @@ async function playCmd(args: string[]): Promise<void> {
 		if (isMissingModule(err, '@rr/executor')) notImplemented('play')
 		throw err
 	}
+}
+
+async function suggestCmd(args: string[]): Promise<void> {
+	const { values, positionals } = parseArgs({
+		args,
+		allowPositionals: true,
+		options: {
+			json: { type: 'boolean', default: false },
+			'include-weak': { type: 'boolean', default: false },
+		},
+	})
+	const file = positionals[0]
+	if (!file) usageError('suggest 需要一个 flow 文件路径')
+	const flow = await loadFlowOrExit(file)
+	const { analyzeFlow } = (await import('@rr/suggest')) as typeof import('@rr/suggest')
+	const result = analyzeFlow(flow, { includeWeak: Boolean(values['include-weak']) })
+
+	if (values['json']) {
+		console.log(JSON.stringify(result, null, 2))
+		return
+	}
+	console.log(pc.bold(`\n${flow.title}`) + pc.dim(`  (${flow.id} v${flow.version})`))
+	if (!result.suggestions.length) {
+		console.log(pc.dim('  没有建议参数化的值（或都已经参数化）。'))
+	} else {
+		console.log(pc.dim('  建议参数化的值：'))
+		for (const s of result.suggestions) {
+			const value = s.currentValue.length > 40 ? `${s.currentValue.slice(0, 40)}…` : s.currentValue
+			const label = s.target.label ? `「${s.target.label}」` : s.target.tag
+			const group =
+				s.group && s.group.stepIds.length > 1 ? `  [同值 ${s.group.stepIds.length} 处]` : ''
+			console.log(
+				`  ${pc.cyan(s.stepId.padEnd(4))} ${s.kind.padEnd(6)} ${value.padEnd(42)} → ` +
+					`{{${pc.bold(s.suggestedName)}}}: ${s.suggestedType}  ${pc.dim(`(${s.confidence})`)}${group}`,
+			)
+			console.log(pc.dim(`       目标：${label} ｜ ${s.reasons.join('；')}`))
+		}
+	}
+	if (result.skipped.length) {
+		console.log(pc.dim(`  已排除 ${result.skipped.length} 处：`))
+		for (const item of result.skipped) console.log(pc.dim(`    ${item.stepId}: ${item.reason}`))
+	}
+	console.log('')
 }
 
 async function studioCmd(args: string[]): Promise<void> {

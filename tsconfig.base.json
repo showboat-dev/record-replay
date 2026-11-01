@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
@@ -12,16 +16,35 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@rr/schema": ["packages/schema/src/index.ts"],
-      "@rr/recorder": ["packages/recorder/src/index.ts"],
-      "@rr/resolver": ["packages/resolver/src/index.ts"],
-      "@rr/executor": ["packages/executor/src/index.ts"],
-      "@rr/ai": ["packages/ai/src/index.ts"],
-      "@rr/harness": ["packages/harness/src/index.ts"],
-      "@rr/studio": ["packages/studio/src/index.ts"]
+      "@rr/schema": [
+        "packages/schema/src/index.ts"
+      ],
+      "@rr/recorder": [
+        "packages/recorder/src/index.ts"
+      ],
+      "@rr/resolver": [
+        "packages/resolver/src/index.ts"
+      ],
+      "@rr/executor": [
+        "packages/executor/src/index.ts"
+      ],
+      "@rr/ai": [
+        "packages/ai/src/index.ts"
+      ],
+      "@rr/harness": [
+        "packages/harness/src/index.ts"
+      ],
+      "@rr/studio": [
+        "packages/studio/src/index.ts"
+      ],
+      "@rr/suggest": [
+        "packages/suggest/src/index.ts"
+      ]
     }
   }
 }

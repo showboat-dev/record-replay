@@ -20,6 +20,7 @@
 @rr/resolver  解析：ElementRef → Playwright Locator（L1 语义 / L2 指纹）
 @rr/executor  执行：按 IR 逐步 resolve→act→verify，产出 RunResult + artifact
 @rr/ai        AI 兜底：OpenAI 兼容客户端 + 脱敏 + 修复提示词（默认关闭）
+@rr/suggest   参数化建议：规则召回 + 命名 + apply/rename（纯函数，本地计算）
 @rr/harness   回归集：批量回放 + 指标 + HTML 报告
 @rr/cli       CLI：record / play / inspect / harness
 ```
@@ -263,24 +264,24 @@ pnpm harness        # 回归报告（M2 之后才有意义）
 
 ## 10. Spike 结论对实现的约束（必须先读 docs/spikes.md）
 
-| 场景 | 结论 | 落地方式 |
-|---|---|---|
+| 场景                   | 结论                                                                                                                                                       | 落地方式                                                                                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | closed shadow 内层元素 | CDP 能识别内层节点（`getNodeForLocation` / `getDocument({pierce:true})`），但 backendNodeId 不可跨 reload，Playwright selector 与 aria snapshot 都看不见它 | 录制：target=host 的 ElementRef + `observed.shadowRootType:'closed'` + `observed.innerOffset`（取事件 `offsetX/offsetY`）；click 带 `position` 回放 |
-| CDP 坐标 | 一律 **CSS px**，不乘 dpr | `DOM.getNodeForLocation` / `Input.dispatchMouseEvent` 直接用 CSS 坐标 |
-| iframe 内 aria ref | `page.getByRef('f1e2')` 可直达（同源/跨域/嵌套）；ref 仅对"该 frame 最近一次 ai 快照"有效；导航后前缀变化 | L4 修复拿到 ref 后立即 `getByRef(ref).normalize()` 再执行；期间不得再 `ariaSnapshot()`；`Invalid frame in aria-ref selector` 归类为可重试 |
-| closed shadow 与 AI | aria snapshot 完全不包含 closed shadow 内容 | 这类目标跳过 AI 调用，直接 host+position 降级 |
+| CDP 坐标               | 一律 **CSS px**，不乘 dpr                                                                                                                                  | `DOM.getNodeForLocation` / `Input.dispatchMouseEvent` 直接用 CSS 坐标                                                                               |
+| iframe 内 aria ref     | `page.getByRef('f1e2')` 可直达（同源/跨域/嵌套）；ref 仅对"该 frame 最近一次 ai 快照"有效；导航后前缀变化                                                  | L4 修复拿到 ref 后立即 `getByRef(ref).normalize()` 再执行；期间不得再 `ariaSnapshot()`；`Invalid frame in aria-ref selector` 归类为可重试           |
+| closed shadow 与 AI    | aria snapshot 完全不包含 closed shadow 内容                                                                                                                | 这类目标跳过 AI 调用，直接 host+position 降级                                                                                                       |
 
 ## 11. 多标签页 / 对话框 / 组合键 / 下载 / 上传（v0.2 新增）
 
 IR 扩展（`packages/schema`，24 单测覆盖）：
 
-| 能力 | schema | 约定 |
-|---|---|---|
-| 多标签页 | 每个 step 可选 `page: { index }`；新 step `switchTab { index }` | index 0 = 录制起点页面，按**创建顺序**编号；录制端在「事件所属 page 与上一步不同」时自动插入 `switchTab`；执行端在切换时 `waitForPage` + `bringToFront()` |
-| 原生对话框 | 新 step `dialog { action: 'accept' \| 'dismiss', promptText? }` | 录制端监听 `page.on('dialog')`，自动 accept 并**插在触发它的动作之后**；执行端出现 dialog step 时切到 manual 模式（暂存 pending dialog，由 dialog step 消费） |
-| 组合键 | `key` step 新增 `modifiers?: ('Alt'\|'Control'\|'Meta'\|'Shift')[]` | 执行端拼成 `Control+A` 交给 `keyboard.press`/`locator.press`；老 flow 无该字段仍兼容 |
-| 下载 | `Expect` 新增 `{ kind: 'download', filenamePattern? }` | 执行端监听 download 并把文件存到 `artifacts/<flowId>/runs/<runId>/downloads/`；`VerifyDeps.recentDownloads()` 提供文件名列表 |
-| 上传 | `upload` 的 `files` 支持 `{{file}}` 模板；`Variable.type` 新增 `'file'` | 录制端无法拿到真实文件路径（浏览器限制），记录占位变量；回放时由变量传真实路径，缺变量 → `VARIABLE_MISSING` |
-| hover | 复用既有 `hover` step | 录制端只保留"有意义"的 hover：目标有 `aria-haspopup`/`aria-expanded`，或其后 2s 内点击了另一个元素；否则丢弃 |
+| 能力       | schema                                                                  | 约定                                                                                                                                                          |
+| ---------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 多标签页   | 每个 step 可选 `page: { index }`；新 step `switchTab { index }`         | index 0 = 录制起点页面，按**创建顺序**编号；录制端在「事件所属 page 与上一步不同」时自动插入 `switchTab`；执行端在切换时 `waitForPage` + `bringToFront()`     |
+| 原生对话框 | 新 step `dialog { action: 'accept' \| 'dismiss', promptText? }`         | 录制端监听 `page.on('dialog')`，自动 accept 并**插在触发它的动作之后**；执行端出现 dialog step 时切到 manual 模式（暂存 pending dialog，由 dialog step 消费） |
+| 组合键     | `key` step 新增 `modifiers?: ('Alt'\|'Control'\|'Meta'\|'Shift')[]`     | 执行端拼成 `Control+A` 交给 `keyboard.press`/`locator.press`；老 flow 无该字段仍兼容                                                                          |
+| 下载       | `Expect` 新增 `{ kind: 'download', filenamePattern? }`                  | 执行端监听 download 并把文件存到 `artifacts/<flowId>/runs/<runId>/downloads/`；`VerifyDeps.recentDownloads()` 提供文件名列表                                  |
+| 上传       | `upload` 的 `files` 支持 `{{file}}` 模板；`Variable.type` 新增 `'file'` | 录制端无法拿到真实文件路径（浏览器限制），记录占位变量；回放时由变量传真实路径，缺变量 → `VARIABLE_MISSING`                                                   |
+| hover      | 复用既有 `hover` step                                                   | 录制端只保留"有意义"的 hover：目标有 `aria-haspopup`/`aria-expanded`，或其后 2s 内点击了另一个元素；否则丢弃                                                  |
 
 **已知边界**：iframe 内的 page 归属（目前按顶层 page 计）；窗口级操作（浏览器前进/后退/刷新）仍无 step；关闭标签页没有显式 step（执行端按 page 失效处理）。

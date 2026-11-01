@@ -278,6 +278,32 @@ describe('schema: 多标签页 / 对话框 / 组合键 / 下载', () => {
 	})
 })
 
+describe('schema: 参数化变量类型', () => {
+	it('支持 text/email/date/number 等新类型，老 string 仍兼容', () => {
+		const parsed = parseFlow(
+			flow({
+				variables: [
+					{ name: 'email', type: 'email', secret: false, source: 'input' },
+					{ name: 'when', type: 'date', secret: false, source: 'input' },
+					{ name: 'amount', type: 'number', secret: false, source: 'input' },
+					{ name: 'legacy', type: 'string', secret: false, source: 'input' },
+				],
+			}),
+		)
+		expect(parsed.variables.map((v) => v.type)).toEqual(['email', 'date', 'number', 'string'])
+	})
+
+	it('未知变量类型被拒绝', () => {
+		expect(() =>
+			parseFlow(
+				flow({
+					variables: [{ name: 'x', type: 'weird', secret: false, source: 'input' } as never],
+				}),
+			),
+		).toThrow(/校验失败/)
+	})
+})
+
 describe('schema: 模板', () => {
 	it('提取模板变量', () => {
 		expect(parseTemplate('hello {{name}} {{ age }}')).toEqual(['name', 'age'])

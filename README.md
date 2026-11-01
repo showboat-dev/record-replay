@@ -43,18 +43,18 @@ docs/          架构契约（architecture.md）、spike 结论
 
 ## 状态（M0 + M1 已完成）
 
-| 模块 | 状态 | 证据 |
-|---|---|---|
-| IR（schema + 契约） | ✅ | 20 单测（含 closed shadow/canvas 坐标契约） |
-| fixture 测试站（11 难场景路由 + 双端口跨域） | ✅ | 27 条 curl + 81 条 Playwright 冒烟 |
-| Spike A/B（closed shadow / iframe ref） | ✅ | `docs/spikes.md`（847 行，实测结论） |
-| recorder | ✅ | capture.js + 合流 + Node 侧候选校验 + closed shadow host/offset + iframe 链；67 单测 |
-| resolver（L1 + L2） | ✅ | 34 单测；L2 抹掉语义候选后 4/4 命中；歧义 15% 拒绝猜测 |
-| executor | ✅ | 协议 13 种 step；失败必产 artifact；71 单测 + 14 个真实浏览器冒烟 |
-| ai（默认关闭） | ✅ | 46 单测（mock fetch）；脱敏/护栏/缓存/ref 生命周期 |
-| harness + CLI | ✅ | 站点清单/统计/HTML 报告；`rr harness` 6 站 18/18 通过 |
-| e2e（录→放 3 次） | ✅ | `e2e/record-play.test.ts` 通过 |
-| v0.2 新能力（标签页/对话框/下载/组合键/上传） | ✅ | `e2e/new-capabilities.test.ts` 6/6；5 条 smoke flow 回放通过 |
+| 模块                                          | 状态 | 证据                                                                                 |
+| --------------------------------------------- | ---- | ------------------------------------------------------------------------------------ |
+| IR（schema + 契约）                           | ✅   | 20 单测（含 closed shadow/canvas 坐标契约）                                          |
+| fixture 测试站（11 难场景路由 + 双端口跨域）  | ✅   | 27 条 curl + 81 条 Playwright 冒烟                                                   |
+| Spike A/B（closed shadow / iframe ref）       | ✅   | `docs/spikes.md`（847 行，实测结论）                                                 |
+| recorder                                      | ✅   | capture.js + 合流 + Node 侧候选校验 + closed shadow host/offset + iframe 链；67 单测 |
+| resolver（L1 + L2）                           | ✅   | 34 单测；L2 抹掉语义候选后 4/4 命中；歧义 15% 拒绝猜测                               |
+| executor                                      | ✅   | 协议 13 种 step；失败必产 artifact；71 单测 + 14 个真实浏览器冒烟                    |
+| ai（默认关闭）                                | ✅   | 46 单测（mock fetch）；脱敏/护栏/缓存/ref 生命周期                                   |
+| harness + CLI                                 | ✅   | 站点清单/统计/HTML 报告；`rr harness` 6 站 18/18 通过                                |
+| e2e（录→放 3 次）                             | ✅   | `e2e/record-play.test.ts` 通过                                                       |
+| v0.2 新能力（标签页/对话框/下载/组合键/上传） | ✅   | `e2e/new-capabilities.test.ts` 6/6；5 条 smoke flow 回放通过                         |
 
 ### 当前基线（`pnpm rr harness --runs 3 --sites local`）
 
@@ -70,26 +70,42 @@ P50 93ms / P95 354ms
 
 `flows/public-saucedemo.json`：**12 步**（登录 → 加购 2 件 → 购物车 → 结算 → 填收货信息 → 完成），密码自动转成 `{{password}}` secret 变量。
 
-| 验证 | 结果 |
-|---|---|
-| `pnpm rr play flows/public-saucedemo.json --runs 10 --var password=secret_sauce` | **10/10 次通过**，12/12 步，单次 ≈1.55s |
-| `RR_VAR_password=... pnpm rr harness --sites public --runs 3` | **3/3 通过**，36 步全部 L1，P50 89ms / P95 192ms |
-| 破坏版（把所有语义候选替换成不存在的 css，强制降级） | **2/2 通过**，12/12 步全部由 L2 指纹接管 |
+| 验证                                                                             | 结果                                             |
+| -------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `pnpm rr play flows/public-saucedemo.json --runs 10 --var password=secret_sauce` | **10/10 次通过**，12/12 步，单次 ≈1.55s          |
+| `RR_VAR_password=... pnpm rr harness --sites public --runs 3`                    | **3/3 通过**，36 步全部 L1，P50 89ms / P95 192ms |
+| 破坏版（把所有语义候选替换成不存在的 css，强制降级）                             | **2/2 通过**，12/12 步全部由 L2 指纹接管         |
 
 > 真实站点测试顺带抓到一个**只在 tsx 运行时才暴露的 bug**：esbuild `keepNames` 会在函数体里注入
 > `__name(...)`，函数被 `page.evaluate` 序列化进页面后抛 `__name is not defined`，导致 L2 全挂。
 > 已在 resolver/executor/recorder 三处注入页面级垫片修复（`NAME_KEEPALIVE_SOURCE`）。
 
+## 参数化建议（Phase 1：规则召回 + 一键采纳）
+
+录完流程后，Studio 自动提示"这个值每次都变，要不要变成运行参数？"
+
+```bash
+npx tsx packages/cli/src/main.ts suggest flows/local-basic.json   # CLI 只读查看建议
+```
+
+- **规则召回**（`@rr/suggest`，117 单测）：输入类型/值格式/中英文字段词表/同值重复打分；搜索框、泛化 textarea 负向降权；password/多选/空值直接排除并给中文原因；置信度 high/medium/weak（默认只展示 high+medium）
+- **Studio 交互**：步骤行 `💡 建议参数化` + 接受/修改/忽略；底部批量条「全部接受」；接受弹窗可改变量名/类型、勾选"同值一起替换"；变量区支持重命名；忽略记在 localStorage（不写 IR）
+- **IR 变更**：接受后 `value` 变 `{{变量}}` + `variables[]` 增加定义，`version+1` 且写 `.bak`
+- **CLI/e2e**：`rr suggest` 只读；`e2e/param-suggest.test.ts` 覆盖"录制→建议→接受→回放（带变量通过/缺变量 VARIABLE_MISSING）"
+
+> Phase 2（AI 裁决）接口已预留：`@rr/suggest` 的 `SuggestionAdjudicator`，只对 medium/weak 候选调用，
+> 输入只包含字段语义 + **脱敏后的值格式**（不传原文/DOM/截图），等内网模型端点到位再接。
+
 ## v0.2 新增录放能力（多标签页 / 对话框 / 下载 / 组合键 / 上传）
 
-| 能力 | 说明 | 验收 flow |
-|---|---|---|
-| 多标签页 | `window.open` 新页自动编号（0=起点页），自动合成 `switchTab`；回放时切页 + `bringToFront` | `flows/smoke-tabs.json`（7 步） |
-| hover 菜单 | 鼠标停留 350ms 上报，只保留"有语义"的 hover（aria-haspopup 或随后点了别的元素） | `flows/smoke-hover.json`（2 步） |
-| 原生对话框 | 录制自动 accept 并插 `dialog` 步骤；回放 manual 模式消费 pending dialog | `flows/smoke-dialog.json`（4 步） |
-| 下载 | 触发下载的步骤自动补 `expect:download`，文件落到 `artifacts/.../downloads/` | `flows/smoke-upload-download.json` |
-| 上传 | file input 点击记 `upload` + `{{file_N}}` 变量（回放传真实路径） | 同上 |
-| 组合键 | 非 Shift 修饰键 → `key{modifiers}`（Ctrl/Cmd+A/C/V…） | `flows/smoke-combo.json`（2 步） |
+| 能力       | 说明                                                                                      | 验收 flow                          |
+| ---------- | ----------------------------------------------------------------------------------------- | ---------------------------------- |
+| 多标签页   | `window.open` 新页自动编号（0=起点页），自动合成 `switchTab`；回放时切页 + `bringToFront` | `flows/smoke-tabs.json`（7 步）    |
+| hover 菜单 | 鼠标停留 350ms 上报，只保留"有语义"的 hover（aria-haspopup 或随后点了别的元素）           | `flows/smoke-hover.json`（2 步）   |
+| 原生对话框 | 录制自动 accept 并插 `dialog` 步骤；回放 manual 模式消费 pending dialog                   | `flows/smoke-dialog.json`（4 步）  |
+| 下载       | 触发下载的步骤自动补 `expect:download`，文件落到 `artifacts/.../downloads/`               | `flows/smoke-upload-download.json` |
+| 上传       | file input 点击记 `upload` + `{{file_N}}` 变量（回放传真实路径）                          | 同上                               |
+| 组合键     | 非 Shift 修饰键 → `key{modifiers}`（Ctrl/Cmd+A/C/V…）                                     | `flows/smoke-combo.json`（2 步）   |
 
 > 已知限制：文件路径浏览器不暴露（上传只能占位变量）；prompt 框只能记默认值；macOS 的 `Control+A` 不是全选（录制端忠实记录按键）；closed shadow 内的输入框仍只能点不能填。
 

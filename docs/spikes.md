@@ -13,24 +13,24 @@ $ node -e "console.log(require('/Users/zhaowei/Projects/DEMO/rr/node_modules/pla
 1.64.1
 ```
 
-| 项 | 值 | 来源 |
-|---|---|---|
-| OS | darwin（macOS, Apple Silicon） | `process.platform`（脚本打印） |
-| Node | v26.10.0 | 同上 |
-| Playwright | 1.64.1（精确锁定，`rr/package.json`） | `playwright/package.json` |
-| Chromium | `156.0.8078.4`（revision `1248`） | `playwright-core/browsers.json` + `browser.version()` 实测 |
-| 浏览器缓存 | `~/Library/Caches/ms-playwright/chromium-1248` | 已就绪，未触发下载 |
-| 运行方式 | `chromium.launch()` 默认 headless，`viewport: {width:800,height:600}`，`deviceScaleFactor` 默认 1（DPR 测试另开 `deviceScaleFactor:2` 的 context） | 脚本 |
+| 项         | 值                                                                                                                                                 | 来源                                                       |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| OS         | darwin（macOS, Apple Silicon）                                                                                                                     | `process.platform`（脚本打印）                             |
+| Node       | v26.10.0                                                                                                                                           | 同上                                                       |
+| Playwright | 1.64.1（精确锁定，`rr/package.json`）                                                                                                              | `playwright/package.json`                                  |
+| Chromium   | `156.0.8078.4`（revision `1248`）                                                                                                                  | `playwright-core/browsers.json` + `browser.version()` 实测 |
+| 浏览器缓存 | `~/Library/Caches/ms-playwright/chromium-1248`                                                                                                     | 已就绪，未触发下载                                         |
+| 运行方式   | `chromium.launch()` 默认 headless，`viewport: {width:800,height:600}`，`deviceScaleFactor` 默认 1（DPR 测试另开 `deviceScaleFactor:2` 的 context） | 脚本                                                       |
 
 所有命令均在 `cd /Users/zhaowei/Projects/DEMO/rr` 下执行；脚本内部通过绝对路径
 `require('/Users/zhaowei/Projects/DEMO/rr/node_modules/playwright')` 解析依赖（脚本放在 `/tmp`，不污染仓库）。
 
 ## 0.1 结论速览（TL;DR）
 
-| Spike | 结论 | 关键证据 |
-|---|---|---|
-| **A. closed shadow 内层元素** | **能拿到**。CDP 可以穿透 `attachShadow({mode:'closed'})` 拿到内层元素的 `backendNodeId` 与稳定属性（`DOM.getNodeForLocation` / `DOM.getDocument({pierce:true})` 均可，且 `closed` 套 `closed` 也行）。**但它不能用于回放**：`backendNodeId` 随文档生命周期失效，且 Playwright locator 完全看不见 closed shadow 内部（`count()===0`）。<br>→ 回放必须走**降级方案：host locator + 相对 host padding box 的 offset**，已实测可精确命中内层按钮。 | `DOM.getNodeForLocation` → `BUTTON id=inner-btn`；`DOM.resolveNode` → `inner-btn\|BUTTON`；`locator('#host').click({position:{x:110,y:80}})` → 内层 button 的 click 监听器 `innerClicks=1` |
-| **B. iframe 内 `[ref=f1e2]`** | **能直接用**。`page.getByRef('f1e2')` 可直接定位同源 iframe、**跨域 iframe**、以及嵌套 iframe 内的元素，不需要自己切 frame。<br>但有 3 个硬约束：① ref 只对**该 frame 最近一次 aria snapshot** 有意义（一次 default 模式快照就会让主 frame 的 ref 全部失效）；② 前缀 `f<n>` 在导航/刷新后会变（`e1` → `f2e1` → `f4e1`），旧 ref 抛 `Invalid frame in aria-ref selector`；③ 需要可复用定位器时用 `await page.getByRef(ref).normalize()`，它产出含 `contentFrame()` 链的稳定 Locator 对象，**跨 reload 可复用**（实测 count=1、点击命中）。 | `getByRef('f1e2').count()===1`；`getByRef('f2e2')` 跨域命中；`normalize()` → `locator('iframe[title="Same frame"]').contentFrame().getByTestId('same-btn')` |
+| Spike                         | 结论                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 关键证据                                                                                                                                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **A. closed shadow 内层元素** | **能拿到**。CDP 可以穿透 `attachShadow({mode:'closed'})` 拿到内层元素的 `backendNodeId` 与稳定属性（`DOM.getNodeForLocation` / `DOM.getDocument({pierce:true})` 均可，且 `closed` 套 `closed` 也行）。**但它不能用于回放**：`backendNodeId` 随文档生命周期失效，且 Playwright locator 完全看不见 closed shadow 内部（`count()===0`）。<br>→ 回放必须走**降级方案：host locator + 相对 host padding box 的 offset**，已实测可精确命中内层按钮。                                                                                            | `DOM.getNodeForLocation` → `BUTTON id=inner-btn`；`DOM.resolveNode` → `inner-btn\|BUTTON`；`locator('#host').click({position:{x:110,y:80}})` → 内层 button 的 click 监听器 `innerClicks=1` |
+| **B. iframe 内 `[ref=f1e2]`** | **能直接用**。`page.getByRef('f1e2')` 可直接定位同源 iframe、**跨域 iframe**、以及嵌套 iframe 内的元素，不需要自己切 frame。<br>但有 3 个硬约束：① ref 只对**该 frame 最近一次 aria snapshot** 有意义（一次 default 模式快照就会让主 frame 的 ref 全部失效）；② 前缀 `f<n>` 在导航/刷新后会变（`e1` → `f2e1` → `f4e1`），旧 ref 抛 `Invalid frame in aria-ref selector`；③ 需要可复用定位器时用 `await page.getByRef(ref).normalize()`，它产出含 `contentFrame()` 链的稳定 Locator 对象，**跨 reload 可复用**（实测 count=1、点击命中）。 | `getByRef('f1e2').count()===1`；`getByRef('f2e2')` 跨域命中；`normalize()` → `locator('iframe[title="Same frame"]').contentFrame().getByTestId('same-btn')`                                |
 
 **对 M0 的一句话影响**：录制/回放主路径应基于「Playwright 语义 locator + 坐标兜底」，其中
 **closed shadow 用 host+offset 兜底**、**AI 兜底用 `getByRef` 并用 `normalize()` 转成持久 locator**；
@@ -47,11 +47,18 @@ $ node -e "console.log(require('/Users/zhaowei/Projects/DEMO/rr/node_modules/pla
 测试页面（脚本内 http server 动态生成，`/tmp/rr-spike-a2.cjs` 顶部 `PAGE`）：
 
 ```html
-<my-widget id="host">          <!-- position:absolute; left:100px; top:100px; 300x200;
+<my-widget id="host">
+	<!-- position:absolute; left:100px; top:100px; 300x200;
                                     border:3px solid #333; padding:10px; box-sizing:border-box -->
-  #shadow-root (closed 不能从页面 JS 访问)
-    <button id="inner-btn" data-testid="inner-btn"
-            style="position:absolute;left:50px;top:60px;width:120px;height:40px">Inner</button>
+	#shadow-root (closed 不能从页面 JS 访问)
+	<button
+		id="inner-btn"
+		data-testid="inner-btn"
+		style="position:absolute;left:50px;top:60px;width:120px;height:40px"
+	>
+		Inner
+	</button></my-widget
+>
 ```
 
 Ground truth（测试脚本通过自己保留的 `window.__closedRoot` 引用取得，仅用于对照）：
@@ -84,9 +91,9 @@ Playwright 的 CSS 引擎穿透，closed 不会）。`elementFromPoint` 的命�
 连接方式：
 
 ```js
-const cdp = await context.newCDPSession(page);
-await cdp.send('DOM.enable');                 // getNodeForLocation 需要 DOM 域启用
-const doc = await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
+const cdp = await context.newCDPSession(page)
+await cdp.send('DOM.enable') // getNodeForLocation 需要 DOM 域启用
+const doc = await cdp.send('DOM.getDocument', { depth: -1, pierce: true })
 ```
 
 ### (a) `DOM.getDocument({depth:-1, pierce:true})` —— 能看到 closed shadow 树
@@ -116,6 +123,7 @@ host 右下空白区（未盖住 button）                   -> { backendNodeId:
 ```
 
 要点：
+
 - **`includeUserAgentShadowDOM` 对本场景没有影响**（它控制的是 UA shadow DOM，如 `<input type=date>`
   内部；author closed shadow 无论如何都能被 `getNodeForLocation` 命中）。
 - 命中是真实 hit-test：点在 host 空白处返回 host，点在内层 button 上返回 button。
@@ -228,6 +236,7 @@ offset = click - paddingBoxOrigin = (213-103, 183-103) = (110, 80)   ← 与事�
 ### 7. CDP Input.dispatchMouseEvent(mousePressed/mouseReleased, x=213,y=183)
 { clicks:[{ target:"host", offsetX:110, offsetY:80, clientX:213, clientY:183 }], innerClicks:1 }   ✔
 ```
+
 ）
 
 ### A.4.3 DPR 处理：CDP 坐标是 **CSS px**，不要乘 dpr
@@ -252,7 +261,7 @@ offset = click - paddingBoxOrigin = (213-103, 183-103) = (110, 80)   ← 与事�
    - 已知坐标：`DOM.getNodeForLocation({x,y})`（一步到位，返回内层元素，无需 pierce）；
    - 已知 host：`DOM.getDocument({depth:-1,pierce:true})` 或 `DOM.describeNode({backendNodeId: host, depth:2, pierce:true})`；
    - 需要操作/取属性：`DOM.resolveNode({backendNodeId})` → `Runtime.callFunctionOn`，`DOM.getBoxModel({backendNodeId})` 取几何。
-   坑：closed shadow root 节点**没有 parentId**（反向映射要靠 `host.shadowRoots` 自上而下）；`nodeId`/`backendNodeId` 别混用；`includeUserAgentShadowDOM` 对本场景无效。
+     坑：closed shadow root 节点**没有 parentId**（反向映射要靠 `host.shadowRoots` 自上而下）；`nodeId`/`backendNodeId` 别混用；`includeUserAgentShadowDOM` 对本场景无效。
 2. **该身份不能用于回放**：`backendNodeId` 随 document 失效（reload 后 `resolveNode` 报
    `Node with given id does not belong to the document`），且 Playwright selector 引擎进不去 closed shadow。
 3. **降级方案成立**：录 `host locator + offset`，回放 `locator(host).click({ position: {x: offsetX, y: offsetY} })`。
@@ -329,14 +338,14 @@ http://127.0.0.1:A/main.html
 
 API 签名先确认（1.64.1 公开类型里就有）：
 
-- `page.getByRef(ref: string): Locator` — 文档原文：*"Refs like `[ref=e2]` are reported by
+- `page.getByRef(ref: string): Locator` — 文档原文：_"Refs like `[ref=e2]` are reported by
   `page.ariaSnapshot()` when called with the `"ai"` mode, and resolve against the latest snapshot taken in the
-  element's frame."*；参数注释：*"Aria ref of the element, for example `e2` or `f1e3`"*
+  element's frame."_；参数注释：_"Aria ref of the element, for example `e2` or `f1e3`"_
   （`node_modules/.pnpm/playwright-core@1.64.1/node_modules/playwright-core/types/types.d.ts:3160-3176`）
-- `page.ariaSnapshot({ mode: 'ai' })` — *"When set to `"ai"`, returns a snapshot optimized for AI consumption:
-  including element references like `[ref=e2]` and snapshots of `<iframe>`s"*（`types.d.ts:2115-2120`）
-- `locator.normalize(): Promise<Locator>` — *"Refs only work for the latest snapshot. Normalize the ref locator
-  and convert it to a string to get resilient locator code"*（`types.d.ts:16497-16517`）
+- `page.ariaSnapshot({ mode: 'ai' })` — _"When set to `"ai"`, returns a snapshot optimized for AI consumption:
+  including element references like `[ref=e2]` and snapshots of `<iframe>`s"_（`types.d.ts:2115-2120`）
+- `locator.normalize(): Promise<Locator>` — _"Refs only work for the latest snapshot. Normalize the ref locator
+  and convert it to a string to get resilient locator code"_（`types.d.ts:16497-16517`）
 
 实现层面（1.64.1 打包产物 `playwright-core/lib/coreBundle.js`）：
 `page.getByRef(ref)` ≡ `page.locator('aria-ref=' + ref)`（:63430-63432）；
@@ -349,21 +358,21 @@ API 签名先确认（1.64.1 公开类型里就有）：
 
 ```yaml
 - generic [active] [ref=e1]:
-  - heading "Main page" [level=1] [ref=e2]
-  - button "Main Button" [ref=e3]
-  - generic [ref=e4]:
-    - text: Email
-    - textbox "Main Email" [ref=e5]
-  - iframe [ref=e6]:
-    - generic [ref=f1e1]:
-      - button "Same Inner Button" [ref=f1e2]
-      - generic [ref=f1e3]:
-        - text: Inner
-        - textbox "Same Email" [ref=f1e4]
-      - iframe [ref=f1e5]:
-        - button "Nested Inner Button" [ref=f3e2]
-  - iframe [ref=e7]:
-    - button "Cross Inner Button" [ref=f2e2]
+    - heading "Main page" [level=1] [ref=e2]
+    - button "Main Button" [ref=e3]
+    - generic [ref=e4]:
+        - text: Email
+        - textbox "Main Email" [ref=e5]
+    - iframe [ref=e6]:
+        - generic [ref=f1e1]:
+            - button "Same Inner Button" [ref=f1e2]
+            - generic [ref=f1e3]:
+                - text: Inner
+                - textbox "Same Email" [ref=f1e4]
+            - iframe [ref=f1e5]:
+                - button "Nested Inner Button" [ref=f3e2]
+    - iframe [ref=e7]:
+        - button "Cross Inner Button" [ref=f2e2]
 ```
 
 对比：`page.ariaSnapshot()`（**default 模式**）只给主 frame 的文本，**没有 ref、也不展开 iframe 内容**：
@@ -566,8 +575,8 @@ click after  reload: "ok"                    ✔ 点击成功
 1. **iframe 内 ref 能否直接用 getByRef？→ 能**，同源 / 跨域 / 嵌套 iframe 均可，且 locator 建在哪个 frame
    上无关（`f<seq>` 自带寻址）。写法就是：
    ```js
-   const snap = await page.ariaSnapshot({ mode: 'ai' });          // 必须有 ref，必须 ai 模式
-   await page.getByRef('f1e2').click();                          // 原样传字符串，不要剥前缀
+   const snap = await page.ariaSnapshot({ mode: 'ai' }) // 必须有 ref，必须 ai 模式
+   await page.getByRef('f1e2').click() // 原样传字符串，不要剥前缀
    ```
 2. **三个必须遵守的约束**：
    - ref ≡ "该 frame **最近一次**快照"的句柄：**快照→决策→执行之间不要插入任何 `ariaSnapshot()`**，
@@ -608,11 +617,11 @@ const code = durable.toString();                            //    'locator(...).
 
 ```yaml
 - generic [active] [ref=e1]:
-  - heading "Main" [level=1] [ref=e2]
-  - button "Open Button" [ref=e5]      ← open shadow 内容可见
-  - button "Before" [ref=e6]
-  - iframe [ref=e7]:
-    - button "In Frame" [ref=f1e2]
+    - heading "Main" [level=1] [ref=e2]
+    - button "Open Button" [ref=e5]      ← open shadow 内容可见
+    - button "Before" [ref=e6]
+    - iframe [ref=e7]:
+        - button "In Frame" [ref=f1e2]
 ```
 
 ```
@@ -627,18 +636,18 @@ AI 兜底**看不见** closed shadow 里的交互目标，只能靠录制期的 
 
 # 对 M0 实现的建议清单（可执行）
 
-| # | 建议 | 依据 |
-|---|---|---|
-| 1 | 录制层同时保存 **a)** locator 语义身份（role/name/testid）与 **b)** 坐标（CSS px）+ **c)** closed-shadow 时的 `hostLocator + offset` | A.5 / A.6 |
-| 2 | closed shadow 判定：`describeNode(host, depth:1, pierce:false).shadowRoots[].shadowRootType === 'closed'` | A.2 坑 3 |
-| 3 | offset 统一取**页面事件的 `offsetX/offsetY`**（语义最明确 = padding box 相对），不要自己二次换算；CDP 侧算的公式见 A.6 | A.4.1 |
-| 4 | 回放 closed shadow：`locator(host).click({position:{x,y}})`；不要用绝对坐标优先（viewport 变化会坏） | A.4.2 |
-| 5 | 所有 CDP 坐标一律 **CSS px**，不乘 dpr；截图/device 像素换算单独做 | A.4.3 |
-| 6 | 绝不在录制产物里持久化 `backendNodeId` | A.3 |
-| 7 | AI 兜底：`ariaSnapshot({mode:'ai'})` → `getByRef(ref)` → `normalize()` 存持久 locator | B.7 |
-| 8 | AI 兜底的**不变量**：snapshot 与 ref 使用之间不得穿插任何 ariaSnapshot；每次导航后必须重取快照 | B.3 / B.4 |
-| 9 | iframe 需有 `title`/`id`/`data-testid`（否则 normalize 出 `locator('iframe')` 不唯一） | B.7 |
-| 10 | 把 `Invalid frame in aria-ref selector` / `getByRef` 的 count=0 归入"需要重新快照"的可重试错误，而不是致命错误 | B.4 / B.5 |
+| #   | 建议                                                                                                                                 | 依据      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| 1   | 录制层同时保存 **a)** locator 语义身份（role/name/testid）与 **b)** 坐标（CSS px）+ **c)** closed-shadow 时的 `hostLocator + offset` | A.5 / A.6 |
+| 2   | closed shadow 判定：`describeNode(host, depth:1, pierce:false).shadowRoots[].shadowRootType === 'closed'`                            | A.2 坑 3  |
+| 3   | offset 统一取**页面事件的 `offsetX/offsetY`**（语义最明确 = padding box 相对），不要自己二次换算；CDP 侧算的公式见 A.6               | A.4.1     |
+| 4   | 回放 closed shadow：`locator(host).click({position:{x,y}})`；不要用绝对坐标优先（viewport 变化会坏）                                 | A.4.2     |
+| 5   | 所有 CDP 坐标一律 **CSS px**，不乘 dpr；截图/device 像素换算单独做                                                                   | A.4.3     |
+| 6   | 绝不在录制产物里持久化 `backendNodeId`                                                                                               | A.3       |
+| 7   | AI 兜底：`ariaSnapshot({mode:'ai'})` → `getByRef(ref)` → `normalize()` 存持久 locator                                                | B.7       |
+| 8   | AI 兜底的**不变量**：snapshot 与 ref 使用之间不得穿插任何 ariaSnapshot；每次导航后必须重取快照                                       | B.3 / B.4 |
+| 9   | iframe 需有 `title`/`id`/`data-testid`（否则 normalize 出 `locator('iframe')` 不唯一）                                               | B.7       |
+| 10  | 把 `Invalid frame in aria-ref selector` / `getByRef` 的 count=0 归入"需要重新快照"的可重试错误，而不是致命错误                       | B.4 / B.5 |
 
 ---
 
@@ -667,8 +676,8 @@ browser: 156.0.8078.4 node: v26.10.0 platform: darwin
 ```js
 // 最小复现：Spike A —— closed shadow DOM 内层元素能否用 CDP 拿到 backendNodeId
 // 运行: cd /Users/zhaowei/Projects/DEMO/rr && node /tmp/rr-spike-a-min.cjs
-const http = require('http');
-const { chromium } = require('/Users/zhaowei/Projects/DEMO/rr/node_modules/playwright');
+const http = require('http')
+const { chromium } = require('/Users/zhaowei/Projects/DEMO/rr/node_modules/playwright')
 
 const PAGE = `<!doctype html><head><style>
 my-widget{position:absolute;left:100px;top:100px;width:300px;height:200px;border:3px solid #333;padding:10px;display:block;box-sizing:border-box;background:#eef}
@@ -681,53 +690,109 @@ customElements.define('my-widget', class extends HTMLElement { constructor() { s
 } });
 window.__clicks = [];
 document.addEventListener('click', e => window.__clicks.push({ target: e.target.id || e.target.nodeName, offsetX: e.offsetX, offsetY: e.offsetY }), true);
-</script></body>`;
+</script></body>`
 
-(async () => {
-  const srv = http.createServer((q, s) => { s.writeHead(200, { 'content-type': 'text/html' }); s.end(PAGE); });
-  await new Promise(r => srv.listen(0, '127.0.0.1', r));
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ viewport: { width: 800, height: 600 } });
-  const page = await context.newPage();
-  await page.goto(`http://127.0.0.1:${srv.address().port}/`);
-  console.log('browser:', browser.version(), 'node:', process.version, 'platform:', process.platform);
+;(async () => {
+	const srv = http.createServer((q, s) => {
+		s.writeHead(200, { 'content-type': 'text/html' })
+		s.end(PAGE)
+	})
+	await new Promise((r) => srv.listen(0, '127.0.0.1', r))
+	const browser = await chromium.launch()
+	const context = await browser.newContext({ viewport: { width: 800, height: 600 } })
+	const page = await context.newPage()
+	await page.goto(`http://127.0.0.1:${srv.address().port}/`)
+	console.log(
+		'browser:',
+		browser.version(),
+		'node:',
+		process.version,
+		'platform:',
+		process.platform,
+	)
 
-  // 内层 button 的真实位置：测试脚本无法从 page JS 拿到（closed），这里按 CSS 计算
-  const geom = await page.evaluate(() => {
-    const h = document.getElementById('host'), b = h.getBoundingClientRect(), cs = getComputedStyle(h);
-    return { x: b.x, y: b.y, borderLeft: parseFloat(cs.borderLeftWidth), borderTop: parseFloat(cs.borderTopWidth) };
-  });
-  const cx = geom.x + geom.borderLeft + 50 + 60, cy = geom.y + geom.borderTop + 60 + 20;  // padding box + button 偏移 + 半径
+	// 内层 button 的真实位置：测试脚本无法从 page JS 拿到（closed），这里按 CSS 计算
+	const geom = await page.evaluate(() => {
+		const h = document.getElementById('host'),
+			b = h.getBoundingClientRect(),
+			cs = getComputedStyle(h)
+		return {
+			x: b.x,
+			y: b.y,
+			borderLeft: parseFloat(cs.borderLeftWidth),
+			borderTop: parseFloat(cs.borderTopWidth),
+		}
+	})
+	const cx = geom.x + geom.borderLeft + 50 + 60,
+		cy = geom.y + geom.borderTop + 60 + 20 // padding box + button 偏移 + 半径
 
-  console.log('1) page JS: element.shadowRoot =', await page.evaluate(() => document.getElementById('host').shadowRoot));
-  console.log('1) elementFromPoint =', await page.evaluate(p => document.elementFromPoint(p.x, p.y).id || 'no-id', { x: cx, y: cy }).catch(() => 'ERR'));
-  console.log('2) Playwright locator #inner-btn count =', await page.locator('#inner-btn').count());
+	console.log(
+		'1) page JS: element.shadowRoot =',
+		await page.evaluate(() => document.getElementById('host').shadowRoot),
+	)
+	console.log(
+		'1) elementFromPoint =',
+		await page
+			.evaluate((p) => document.elementFromPoint(p.x, p.y).id || 'no-id', { x: cx, y: cy })
+			.catch(() => 'ERR'),
+	)
+	console.log('2) Playwright locator #inner-btn count =', await page.locator('#inner-btn').count())
 
-  const cdp = await context.newCDPSession(page);
-  await cdp.send('DOM.enable');
-  const doc = await cdp.send('DOM.getDocument', { depth: -1, pierce: true });
-  const find = (n, p) => { if (p(n)) return n; for (const c of [...(n.children || []), ...(n.shadowRoots || [])]) { const r = find(c, p); if (r) return r; } return null; };
-  const hostNode = find(doc.root, n => n.nodeName === 'MY-WIDGET');
-  const btnNode = find(doc.root, n => (n.attributes || []).includes('inner-btn'));
-  console.log('3) getDocument(pierce): host.shadowRoots =', JSON.stringify(hostNode.shadowRoots.map(s => ({ type: s.shadowRootType, backendNodeId: s.backendNodeId }))));
-  console.log('3) getDocument(pierce): inner BUTTON backendNodeId =', btnNode && btnNode.backendNodeId);
+	const cdp = await context.newCDPSession(page)
+	await cdp.send('DOM.enable')
+	const doc = await cdp.send('DOM.getDocument', { depth: -1, pierce: true })
+	const find = (n, p) => {
+		if (p(n)) return n
+		for (const c of [...(n.children || []), ...(n.shadowRoots || [])]) {
+			const r = find(c, p)
+			if (r) return r
+		}
+		return null
+	}
+	const hostNode = find(doc.root, (n) => n.nodeName === 'MY-WIDGET')
+	const btnNode = find(doc.root, (n) => (n.attributes || []).includes('inner-btn'))
+	console.log(
+		'3) getDocument(pierce): host.shadowRoots =',
+		JSON.stringify(
+			hostNode.shadowRoots.map((s) => ({ type: s.shadowRootType, backendNodeId: s.backendNodeId })),
+		),
+	)
+	console.log(
+		'3) getDocument(pierce): inner BUTTON backendNodeId =',
+		btnNode && btnNode.backendNodeId,
+	)
 
-  const at = await cdp.send('DOM.getNodeForLocation', { x: cx, y: cy });
-  const atDesc = await cdp.send('DOM.describeNode', { backendNodeId: at.backendNodeId });
-  console.log('4) getNodeForLocation(内层中心) ->', atDesc.node.nodeName, JSON.stringify(atDesc.node.attributes));
+	const at = await cdp.send('DOM.getNodeForLocation', { x: cx, y: cy })
+	const atDesc = await cdp.send('DOM.describeNode', { backendNodeId: at.backendNodeId })
+	console.log(
+		'4) getNodeForLocation(内层中心) ->',
+		atDesc.node.nodeName,
+		JSON.stringify(atDesc.node.attributes),
+	)
 
-  const resolved = await cdp.send('DOM.resolveNode', { backendNodeId: at.backendNodeId });
-  const identity = await cdp.send('Runtime.callFunctionOn', { objectId: resolved.object.objectId,
-    functionDeclaration: 'function(){ return this.id + "|" + this.nodeName; }', returnByValue: true });
-  console.log('5) resolveNode -> identity =', identity.result.value);
+	const resolved = await cdp.send('DOM.resolveNode', { backendNodeId: at.backendNodeId })
+	const identity = await cdp.send('Runtime.callFunctionOn', {
+		objectId: resolved.object.objectId,
+		functionDeclaration: 'function(){ return this.id + "|" + this.nodeName; }',
+		returnByValue: true,
+	})
+	console.log('5) resolveNode -> identity =', identity.result.value)
 
-  // 降级方案：host + padding-box offset
-  await page.locator('#host').click({ position: { x: 50 + 60, y: 60 + 20 } });
-  console.log('6) locator(#host).click({position}) ->', JSON.stringify(await page.evaluate(() => window.__clicks)),
-              'innerClicks =', await page.evaluate(() => window.__inner || 0));
+	// 降级方案：host + padding-box offset
+	await page.locator('#host').click({ position: { x: 50 + 60, y: 60 + 20 } })
+	console.log(
+		'6) locator(#host).click({position}) ->',
+		JSON.stringify(await page.evaluate(() => window.__clicks)),
+		'innerClicks =',
+		await page.evaluate(() => window.__inner || 0),
+	)
 
-  await browser.close(); srv.close();
-})().catch(e => { console.error('FATAL', e); process.exit(1); });
+	await browser.close()
+	srv.close()
+})().catch((e) => {
+	console.error('FATAL', e)
+	process.exit(1)
+})
 ```
 
 ## A.2 `/tmp/rr-spike-b-min.cjs`（Spike B）
@@ -763,84 +828,111 @@ browser: 156.0.8078.4 playwright: 1.64.1
 ```js
 // 最小复现：Spike B —— iframe 内 aria-ref 能否用 page.getByRef() 定位；normalize() 能否转成可复用 locator
 // 运行: cd /Users/zhaowei/Projects/DEMO/rr && node /tmp/rr-spike-b-min.cjs
-const http = require('http');
-const { chromium } = require('/Users/zhaowei/Projects/DEMO/rr/node_modules/playwright');
+const http = require('http')
+const { chromium } = require('/Users/zhaowei/Projects/DEMO/rr/node_modules/playwright')
 
 const MAIN = `<!doctype html><body>
 <h1>Main</h1><button id="main-btn" data-testid="main-btn">Main Button</button>
 <iframe id="same" src="/same.html" width="360" height="120" title="Same frame"></iframe>
-<iframe id="cross" src="__CROSS__" width="360" height="120" title="Cross frame"></iframe></body>`;
-const SAME = `<!doctype html><body><button id="same-btn" data-testid="same-btn">Same Inner Button</button></body>`;
-const CROSS = `<!doctype html><body><button id="cross-btn" data-testid="cross-btn">Cross Inner Button</button></body>`;
+<iframe id="cross" src="__CROSS__" width="360" height="120" title="Cross frame"></iframe></body>`
+const SAME = `<!doctype html><body><button id="same-btn" data-testid="same-btn">Same Inner Button</button></body>`
+const CROSS = `<!doctype html><body><button id="cross-btn" data-testid="cross-btn">Cross Inner Button</button></body>`
 
-const refs = s => [...s.matchAll(/\[ref=([a-z0-9]+)\]/gi)].map(m => m[1]);
+const refs = (s) => [...s.matchAll(/\[ref=([a-z0-9]+)\]/gi)].map((m) => m[1])
 
-(async () => {
-  const srvB = http.createServer((q, s) => { s.writeHead(200, { 'content-type': 'text/html' }); s.end(CROSS); });
-  await new Promise(r => srvB.listen(0, '127.0.0.1', r));
-  const srvA = http.createServer((q, s) => {
-    s.writeHead(200, { 'content-type': 'text/html' });
-    s.end(q.url === '/same.html' ? SAME : MAIN.replace('__CROSS__', `http://127.0.0.1:${srvB.address().port}/cross.html`));
-  });
-  await new Promise(r => srvA.listen(0, '127.0.0.1', r));
+;(async () => {
+	const srvB = http.createServer((q, s) => {
+		s.writeHead(200, { 'content-type': 'text/html' })
+		s.end(CROSS)
+	})
+	await new Promise((r) => srvB.listen(0, '127.0.0.1', r))
+	const srvA = http.createServer((q, s) => {
+		s.writeHead(200, { 'content-type': 'text/html' })
+		s.end(
+			q.url === '/same.html'
+				? SAME
+				: MAIN.replace('__CROSS__', `http://127.0.0.1:${srvB.address().port}/cross.html`),
+		)
+	})
+	await new Promise((r) => srvA.listen(0, '127.0.0.1', r))
 
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ viewport: { width: 900, height: 700 } });
-  const page = await context.newPage();
-  await page.goto(`http://127.0.0.1:${srvA.address().port}/main.html`);
-  await page.waitForLoadState('load');
-  console.log('browser:', browser.version(), 'playwright: 1.64.1');
+	const browser = await chromium.launch()
+	const context = await browser.newContext({ viewport: { width: 900, height: 700 } })
+	const page = await context.newPage()
+	await page.goto(`http://127.0.0.1:${srvA.address().port}/main.html`)
+	await page.waitForLoadState('load')
+	console.log('browser:', browser.version(), 'playwright: 1.64.1')
 
-  const snap = await page.ariaSnapshot({ mode: 'ai' });
-  console.log('1) page.ariaSnapshot({mode:"ai"}) =\n' + snap);
-  const all = refs(snap);
-  const mainRef = all.find(r => /^e\d+$/.test(r) && r !== 'e1');
-  const iframeRefs = all.filter(r => /^f\d+e\d+$/.test(r));
-  console.log('2) refs =', all.join(','));
+	const snap = await page.ariaSnapshot({ mode: 'ai' })
+	console.log('1) page.ariaSnapshot({mode:"ai"}) =\n' + snap)
+	const all = refs(snap)
+	const mainRef = all.find((r) => /^e\d+$/.test(r) && r !== 'e1')
+	const iframeRefs = all.filter((r) => /^f\d+e\d+$/.test(r))
+	console.log('2) refs =', all.join(','))
 
-  for (const r of [mainRef, ...iframeRefs]) {
-    const loc = page.getByRef(r);
-    console.log(`3) getByRef('${r}') count=${await loc.count()} text=${(await loc.evaluate(e => e.textContent || '')).trim()}`);
-  }
+	for (const r of [mainRef, ...iframeRefs]) {
+		const loc = page.getByRef(r)
+		console.log(
+			`3) getByRef('${r}') count=${await loc.count()} text=${(await loc.evaluate((e) => e.textContent || '')).trim()}`,
+		)
+	}
 
-  // normalize(): ref -> 稳定 locator 代码（含 contentFrame() 链）
-  const norm = {};
-  for (const r of [mainRef, ...iframeRefs]) norm[r] = (await page.getByRef(r).normalize()).toString();
-  console.log('4) normalize() =\n' + JSON.stringify(norm, null, 2));
+	// normalize(): ref -> 稳定 locator 代码（含 contentFrame() 链）
+	const norm = {}
+	for (const r of [mainRef, ...iframeRefs])
+		norm[r] = (await page.getByRef(r).normalize()).toString()
+	console.log('4) normalize() =\n' + JSON.stringify(norm, null, 2))
 
-  // default 模式快照会清掉「主 frame」的 ref 表（iframe 的 ref 不受影响）
-  await page.ariaSnapshot();                       // mode 默认 = default，无 ref
-  console.log('5) 一次 default 快照后: mainRef count =', await page.getByRef(mainRef).count(),
-              '| iframeRef count =', await page.getByRef(iframeRefs[0]).count());
+	// default 模式快照会清掉「主 frame」的 ref 表（iframe 的 ref 不受影响）
+	await page.ariaSnapshot() // mode 默认 = default，无 ref
+	console.log(
+		'5) 一次 default 快照后: mainRef count =',
+		await page.getByRef(mainRef).count(),
+		'| iframeRef count =',
+		await page.getByRef(iframeRefs[0]).count(),
+	)
 
-  // normalize 出来的 Locator 对象可跨导航复用
-  await page.ariaSnapshot({ mode: 'ai' });
-  const durable = await page.getByRef(iframeRefs[0]).normalize();
-  await page.reload(); await page.waitForLoadState('load');
-  console.log('6) reload 后 durable Locator count =', await durable.count(),
-              '| 旧 ref count =', await page.getByRef(iframeRefs[0]).count().catch(e => 'ERR ' + e.message.split('\n')[0]));
+	// normalize 出来的 Locator 对象可跨导航复用
+	await page.ariaSnapshot({ mode: 'ai' })
+	const durable = await page.getByRef(iframeRefs[0]).normalize()
+	await page.reload()
+	await page.waitForLoadState('load')
+	console.log(
+		'6) reload 后 durable Locator count =',
+		await durable.count(),
+		'| 旧 ref count =',
+		await page
+			.getByRef(iframeRefs[0])
+			.count()
+			.catch((e) => 'ERR ' + e.message.split('\n')[0]),
+	)
 
-  await browser.close(); srvA.close(); srvB.close();
-})().catch(e => { console.error('FATAL', e); process.exit(1); });
+	await browser.close()
+	srvA.close()
+	srvB.close()
+})().catch((e) => {
+	console.error('FATAL', e)
+	process.exit(1)
+})
 ```
 
 ---
 
 # 附录 B：本次全部探针脚本（均在 `/tmp`，可直接复跑）
 
-| 脚本 | 用途 | 关键覆盖 |
-|---|---|---|
-| `/tmp/rr-spike-a2.cjs` | Spike A 主探针 | getDocument pierce / getNodeForLocation / describeNode / resolveNode / getBoxModel / 嵌套 closed shadow / 点击事件 offset / 降级方案三种写法 / DPR=2 / CDP Input 回放 |
-| `/tmp/rr-spike-a3.cjs` | Spike A 补充 | nodeId 图链路、offset 命中控制组、backendNodeId reload 失效 |
-| `/tmp/rr-spike-a4.cjs` | Spike A 补充 | shadow root 节点无 parentId、pierce 开关差异、`pushNodesByBackendIdsToFrontend` |
-| `/tmp/rr-spike-b.cjs` | Spike B 主探针 | 同源/跨域/嵌套 iframe、ai vs default 快照、getByRef 全量解析、点击归因、frame 内 query、ref 生命周期 |
-| `/tmp/rr-spike-b2.cjs` | Spike B 补充 | ref 表被 default 快照覆盖、帧序号探测（f0/f1/f2/f9） |
-| `/tmp/rr-spike-b3.cjs` | Spike B 补充 | 前缀随 reload 变化、ref 稳定/不复用、删除后 ref 消失 |
-| `/tmp/rr-spike-b4.cjs` | Spike B 补充 | `normalize()` 代码生成（同源/跨域）、`page.locator(code)` 不可用 |
-| `/tmp/rr-spike-b5.cjs` | Spike B 补充 | normalize Locator 跨 reload 复用、嵌套 iframe 的链式代码、无 title iframe |
-| `/tmp/rr-spike-b6.cjs` | A×B 交叉 | closed vs open shadow 在 aria 快照中的可见性、无标识 iframe 的 normalize 结果 |
-| `/tmp/rr-spike-a-min.cjs` | 最小复现 A | 附录 A.1 |
-| `/tmp/rr-spike-b-min.cjs` | 最小复现 B | 附录 A.2 |
+| 脚本                      | 用途           | 关键覆盖                                                                                                                                                              |
+| ------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/tmp/rr-spike-a2.cjs`    | Spike A 主探针 | getDocument pierce / getNodeForLocation / describeNode / resolveNode / getBoxModel / 嵌套 closed shadow / 点击事件 offset / 降级方案三种写法 / DPR=2 / CDP Input 回放 |
+| `/tmp/rr-spike-a3.cjs`    | Spike A 补充   | nodeId 图链路、offset 命中控制组、backendNodeId reload 失效                                                                                                           |
+| `/tmp/rr-spike-a4.cjs`    | Spike A 补充   | shadow root 节点无 parentId、pierce 开关差异、`pushNodesByBackendIdsToFrontend`                                                                                       |
+| `/tmp/rr-spike-b.cjs`     | Spike B 主探针 | 同源/跨域/嵌套 iframe、ai vs default 快照、getByRef 全量解析、点击归因、frame 内 query、ref 生命周期                                                                  |
+| `/tmp/rr-spike-b2.cjs`    | Spike B 补充   | ref 表被 default 快照覆盖、帧序号探测（f0/f1/f2/f9）                                                                                                                  |
+| `/tmp/rr-spike-b3.cjs`    | Spike B 补充   | 前缀随 reload 变化、ref 稳定/不复用、删除后 ref 消失                                                                                                                  |
+| `/tmp/rr-spike-b4.cjs`    | Spike B 补充   | `normalize()` 代码生成（同源/跨域）、`page.locator(code)` 不可用                                                                                                      |
+| `/tmp/rr-spike-b5.cjs`    | Spike B 补充   | normalize Locator 跨 reload 复用、嵌套 iframe 的链式代码、无 title iframe                                                                                             |
+| `/tmp/rr-spike-b6.cjs`    | A×B 交叉       | closed vs open shadow 在 aria 快照中的可见性、无标识 iframe 的 normalize 结果                                                                                         |
+| `/tmp/rr-spike-a-min.cjs` | 最小复现 A     | 附录 A.1                                                                                                                                                              |
+| `/tmp/rr-spike-b-min.cjs` | 最小复现 B     | 附录 A.2                                                                                                                                                              |
 
 原始输出文件：`/tmp/spike-a2.out`、`/tmp/spike-a3.out`、`/tmp/spike-a4.out`、`/tmp/spike-b.out`、
 `/tmp/spike-b2.out`、`/tmp/spike-b3.out`、`/tmp/spike-b4.out`、`/tmp/spike-b5.out`、`/tmp/spike-b6.out`、

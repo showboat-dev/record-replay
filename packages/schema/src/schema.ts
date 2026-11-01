@@ -121,7 +121,7 @@ export type Expect = z.infer<typeof ExpectSchema>
 
 export const VariableSchema = z.object({
 	name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, '变量名必须是合法标识符'),
-	type: z.enum(['string', 'secret', 'file']).default('string'),
+	type: z.enum(['string', 'text', 'email', 'date', 'number', 'secret', 'file']).default('string'),
 	defaultValue: z.string().optional(),
 	/** secret 变量不会出现在 trace 明文里；UI 只显示 ****** */
 	secret: z.boolean().default(false),

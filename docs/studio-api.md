@@ -27,6 +27,7 @@
 ## REST API
 
 ### 流程
+
 - `GET /api/flows` → `{ flows: Array<{ file: string; title: string; steps: number; version: number; updatedAt: string }> }`
 - `GET /api/flows/:file` → `{ flow: Flow; steps: Array<StepSummary> }`
 - `POST /api/flows/:file/rename` body `{ title: string }` → `{ ok: true }`
@@ -38,6 +39,7 @@
 `title` 由后端生成人话：`打开 <url>` / `输入 <值> 到 <描述>` / `点击 <描述>` / `选择 <值>` / `按键 <key>` / `等待 <条件>` / `断言 <...>`。
 
 ### 录制
+
 - `POST /api/record/start` body `{ url: string; title?: string }` → `{ sessionId: string }`
   - 后端启动**可见**的受控 Chromium（headless:false），开始采集。
 - `GET /api/record/status?sessionId=...` → `{ recording: boolean; steps: StepSummary[]; elapsedMs: number }`
@@ -48,25 +50,37 @@
 `SelfCheck = { ok: boolean; steps: Array<{ id: string; status: 'pass'|'fail'; level?: string; reason?: string }>; summary: string }`
 
 ### 回放
+
 - `POST /api/play` body `{ file: string; runs?: number; variables?: Record<string,string>; headed?: boolean }` → `{ runId: string }`
 - `GET /api/runs/:runId` → `{ status: 'running'|'done'|'error'; file: string; runs: Array<{ ok: boolean; steps: Array<{ id: string; kind: string; status: string; level?: string; ms: number; reason?: string; code?: string; screenshot?: string }> }>; message?: string }`
 - `POST /api/runs/:runId/stop` → 尽量中止（可选实现）
 
 ### 静态资源
+
 - `GET /artifacts/*` → artifacts 目录下的文件（截图等），直接以 `Content-Type` 返回。
 - `GET /api/config` → `{ aiEnabled: boolean; flowsDir: string; artifactsDir: string }`
 
 ## 错误码 → 人话（后端统一映射，前端直接展示 `reason`）
 
-| code | 人话 |
-|---|---|
+| code              | 人话                                             |
+| ----------------- | ------------------------------------------------ |
 | ELEMENT_NOT_FOUND | 页面上找不到这个元素，可能页面改版了或还没加载完 |
-| NOT_ACTIONABLE | 找到了元素但暂时点不了（被遮挡/不可见/未启用） |
-| NO_EFFECT | 点了但页面没有反应，可能需要再确认一次 |
-| EXPECT_MISMATCH | 操作后页面没有出现预期变化 |
-| NAVIGATION_FAILED | 页面打开失败，检查网址或网络 |
-| BROWSER_CRASH | 浏览器异常退出 |
-| VARIABLE_MISSING | 缺少运行参数（变量未填写） |
+| NOT_ACTIONABLE    | 找到了元素但暂时点不了（被遮挡/不可见/未启用）   |
+| NO_EFFECT         | 点了但页面没有反应，可能需要再确认一次           |
+| EXPECT_MISMATCH   | 操作后页面没有出现预期变化                       |
+| NAVIGATION_FAILED | 页面打开失败，检查网址或网络                     |
+| BROWSER_CRASH     | 浏览器异常退出                                   |
+| VARIABLE_MISSING  | 缺少运行参数（变量未填写）                       |
+
+### 参数化建议（v0.3 新增，契约详见 docs/parameterization.md）
+
+- `GET /api/flows/:file/suggestions?includeWeak=0` → `FlowSuggestions`
+- `POST /api/flows/:file/apply-suggestion` body `{ stepId, name, type?, applySameValue? }` → `{ ok, flow, steps, suggestions }`
+- `POST /api/flows/:file/apply-suggestions` body `{ apply: ApplySuggestionInput[] }` → 同上（先整体校验）
+- `POST /api/flows/:file/variables/rename` body `{ from, to }` → `{ ok, flow }`
+
+错误：`SuggestError` → 400 `{ error, code }`；参数错 → 400 `{ error, code:'BAD_REQUEST' }`；flow 不存在 → 404。
+apply 后不自动自检；`suggestions` 重算失败时为 `null`（写入已成功）。
 
 ## 非目标（v0.1 不做）
 

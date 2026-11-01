@@ -13,6 +13,7 @@ export default defineConfig({
       '@rr/ai': r('./packages/ai/src/index.ts'),
       '@rr/harness': r('./packages/harness/src/index.ts'),
       '@rr/studio': r('./packages/studio/src/index.ts'),
+      '@rr/suggest': r('./packages/suggest/src/index.ts'),
     },
   },
   test: {

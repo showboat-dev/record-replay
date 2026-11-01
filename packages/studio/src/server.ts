@@ -12,12 +12,40 @@ import { extname, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { loadFlow, makeId, saveFlow, type Flow, type Step, type Variable } from '@rr/schema'
+import {
+	analyzeFlow,
+	applySuggestion,
+	applySuggestions,
+	renameVariable,
+	SuggestError,
+	type ApplyResult,
+	type ApplySuggestionInput,
+	type FlowSuggestions,
+	type SuggestVariableType,
+} from '@rr/suggest'
 import { playRuns, type RunResult, type StepResult } from '@rr/executor'
 import { record, type RecordOptions } from '@rr/recorder'
 
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url))
-const FLOWS_DIR = join(ROOT, 'flows')
-const ARTIFACTS_DIR = join(ROOT, 'artifacts')
+/** 默认目录（生产用）；测试/多实例可用 createStudioServer({flowsDir, artifactsDir}) 或环境变量覆盖 */
+const DEFAULT_FLOWS_DIR = join(ROOT, 'flows')
+const DEFAULT_ARTIFACTS_DIR = join(ROOT, 'artifacts')
+
+export interface StudioConfig {
+	flowsDir: string
+	artifactsDir: string
+}
+
+/**
+ * 解析运行目录：显式参数 > 环境变量 > 默认值。
+ * 之所以要可注入：API 测试必须用**临时目录 + 临时端口**，不能碰 4400 上正在跑的服务和真实 flows。
+ */
+export function resolveStudioConfig(overrides: Partial<StudioConfig> = {}): StudioConfig {
+	return {
+		flowsDir: overrides.flowsDir ?? process.env.RR_STUDIO_FLOWS_DIR ?? DEFAULT_FLOWS_DIR,
+		artifactsDir: overrides.artifactsDir ?? process.env.RR_STUDIO_ARTIFACTS_DIR ?? DEFAULT_ARTIFACTS_DIR,
+	}
+}
 const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url))
 
 /* ------------------------------------------------------------------ */
@@ -226,8 +254,8 @@ async function serveStatic(res: ServerResponse, file: string): Promise<void> {
 	}
 }
 
-function flowFileFromName(name: string): string | undefined {
-	const safe = safeJoin(FLOWS_DIR, name)
+function flowFileFromName(config: StudioConfig, name: string): string | undefined {
+	const safe = safeJoin(config.flowsDir, name)
 	if (!safe || !safe.endsWith('.json') || !existsSync(safe)) return undefined
 	return safe
 }
@@ -236,15 +264,15 @@ function flowFileFromName(name: string): string | undefined {
 /* 流程相关                                                            */
 /* ------------------------------------------------------------------ */
 
-async function listFlows(): Promise<Array<Record<string, unknown>>> {
-	await mkdir(FLOWS_DIR, { recursive: true })
-	const files = (await readdir(FLOWS_DIR))
+async function listFlows(config: StudioConfig): Promise<Array<Record<string, unknown>>> {
+	await mkdir(config.flowsDir, { recursive: true })
+	const files = (await readdir(config.flowsDir))
 		.filter((f) => f.endsWith('.json') && !f.endsWith('.bak'))
 		.sort()
 	const out: Array<Record<string, unknown>> = []
 	for (const file of files) {
 		try {
-			const full = join(FLOWS_DIR, file)
+			const full = join(config.flowsDir, file)
 			const flow = await loadFlow(full)
 			const stat = await fsStat(full).catch(() => undefined)
 			out.push({
@@ -265,7 +293,10 @@ async function listFlows(): Promise<Array<Record<string, unknown>>> {
 /* 录制                                                                */
 /* ------------------------------------------------------------------ */
 
-async function startRecording(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function startRecording(
+	config: StudioConfig,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
 	const url = String(body.url ?? '').trim()
 	if (!url) throw new Error('缺少 url')
 	const title = String(body.title ?? `录制 ${new URL(url).host}`)
@@ -287,7 +318,7 @@ async function startRecording(body: Record<string, unknown>): Promise<Record<str
 
 	const options: RecordOptions = {
 		startUrl: url,
-		outPath: join(FLOWS_DIR, file),
+		outPath: join(config.flowsDir, file),
 		headless: false,
 		stopSignal: controller.signal,
 		onStep: (step) => {
@@ -314,7 +345,10 @@ async function startRecording(body: Record<string, unknown>): Promise<Record<str
 	return { sessionId: id }
 }
 
-async function stopRecording(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function stopRecording(
+	config: StudioConfig,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
 	const session = sessions.get(String(body.sessionId ?? ''))
 	if (!session) throw new Error('录制会话不存在')
 	session.controller.abort()
@@ -322,7 +356,7 @@ async function stopRecording(body: Record<string, unknown>): Promise<Record<stri
 	if (!result) throw new Error('录制失败（没有产生 flow）')
 
 	// 录制后自检：立刻回放一次（headless），失败步骤标出来
-	const selfCheck = await runSelfCheck(result.flow, join(FLOWS_DIR, session.file))
+	const selfCheck = await runSelfCheck(result.flow, join(config.flowsDir, session.file))
 	return { file: session.file, flow: result.flow, selfCheck }
 }
 
@@ -352,9 +386,12 @@ async function runSelfCheck(flow: Flow, file: string): Promise<Record<string, un
 /* 回放                                                                */
 /* ------------------------------------------------------------------ */
 
-async function startPlayback(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function startPlayback(
+	config: StudioConfig,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
 	const file = String(body.file ?? '')
-	const flowFile = flowFileFromName(file)
+	const flowFile = flowFileFromName(config, file)
 	if (!flowFile) throw new Error('流程文件不存在')
 	const flow = await loadFlow(flowFile)
 	const runs = Math.max(1, Math.min(10, Number(body.runs ?? 1)))
@@ -390,7 +427,7 @@ async function startPlayback(body: Record<string, unknown>): Promise<Record<stri
 					...(s.level ? { level: s.level } : {}),
 					ms: s.ms,
 					...(s.error ? { code: s.error.code, reason: reasonOf(s) ?? s.error.message } : {}),
-					screenshot: screenshotUrl(flow.id, r.runId, stepIndex, s.status),
+					screenshot: screenshotUrl(config, flow.id, r.runId, stepIndex, s.status),
 				})),
 			}))
 			job.status = 'done'
@@ -407,12 +444,13 @@ async function startPlayback(body: Record<string, unknown>): Promise<Record<stri
 
 /** 失败步骤用 after.png，通过步骤用 before.png（存在才给 URL） */
 function screenshotUrl(
+	config: StudioConfig,
 	flowId: string,
 	runId: string,
 	stepIndex: number,
 	status: string,
 ): string | undefined {
-	const base = join(ARTIFACTS_DIR, flowId, 'runs', runId, String(stepIndex))
+	const base = join(config.artifactsDir, flowId, 'runs', runId, String(stepIndex))
 	const file = status === 'pass' ? join(base, 'before.png') : join(base, 'after.png')
 	if (!existsSync(file)) return undefined
 	return `/artifacts/${flowId}/runs/${runId}/${stepIndex}/${status === 'pass' ? 'before' : 'after'}.png`
@@ -422,8 +460,12 @@ function screenshotUrl(
 /* 编辑                                                                */
 /* ------------------------------------------------------------------ */
 
-async function updateFlow(file: string, mutate: (flow: Flow) => void): Promise<Flow> {
-	const flowFile = flowFileFromName(file)
+async function updateFlow(
+	config: StudioConfig,
+	file: string,
+	mutate: (flow: Flow) => void,
+): Promise<Flow> {
+	const flowFile = flowFileFromName(config, file)
 	if (!flowFile) throw new Error('流程文件不存在')
 	const flow = await loadFlow(flowFile)
 	mutate(flow)
@@ -432,10 +474,132 @@ async function updateFlow(file: string, mutate: (flow: Flow) => void): Promise<F
 }
 
 /* ------------------------------------------------------------------ */
+/* 参数化建议（docs/parameterization.md §6）                            */
+/* ------------------------------------------------------------------ */
+
+/** 请求参数错误（→ 400，与 SuggestError 区分：这是调用方没按契约传参） */
+export class ApiParamError extends Error {
+	readonly code = 'BAD_REQUEST'
+	constructor(message: string) {
+		super(message)
+		this.name = 'ApiParamError'
+	}
+}
+
+const SUGGEST_VARIABLE_TYPES: readonly SuggestVariableType[] = [
+	'string',
+	'text',
+	'email',
+	'date',
+	'number',
+]
+
+/** 同一次请求最多处理多少条批量应用（防止误传巨大数组把服务打挂） */
+const MAX_BATCH_APPLY = 200
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+	return value as Record<string, unknown>
+}
+
+/** 校验并规范化单条 apply 入参（SuggestError 之外的"参数错"在这里拦掉，消息带中文） */
+export function parseApplyInput(raw: unknown): ApplySuggestionInput {
+	const body = asRecord(raw)
+	if (!body) throw new ApiParamError('请求体必须是 JSON 对象')
+
+	const stepId = typeof body.stepId === 'string' ? body.stepId.trim() : ''
+	if (!stepId) throw new ApiParamError('缺少 stepId')
+	const name = typeof body.name === 'string' ? body.name.trim() : ''
+	if (!name) throw new ApiParamError('缺少变量名 name')
+
+	const input: ApplySuggestionInput = { stepId, name }
+	if (body.type !== undefined) {
+		if (
+			typeof body.type !== 'string' ||
+			!SUGGEST_VARIABLE_TYPES.includes(body.type as SuggestVariableType)
+		) {
+			throw new ApiParamError(`type 只能是 ${SUGGEST_VARIABLE_TYPES.join(' / ')}`)
+		}
+		input.type = body.type as SuggestVariableType
+	}
+	if (body.applySameValue !== undefined) {
+		if (typeof body.applySameValue !== 'boolean') {
+			throw new ApiParamError('applySameValue 必须是布尔值')
+		}
+		input.applySameValue = body.applySameValue
+	}
+	return input
+}
+
+/** 校验批量入参：先整体校验再交给 suggest（任一条非法 → 整个请求 400，不落盘） */
+export function parseApplyBatch(raw: unknown): ApplySuggestionInput[] {
+	const body = asRecord(raw)
+	if (!body) throw new ApiParamError('请求体必须是 JSON 对象')
+	if (!Array.isArray(body.apply)) throw new ApiParamError('缺少 apply 数组')
+	if (body.apply.length === 0) throw new ApiParamError('apply 不能为空')
+	if (body.apply.length > MAX_BATCH_APPLY) {
+		throw new ApiParamError(`一次最多应用 ${MAX_BATCH_APPLY} 条建议`)
+	}
+	return body.apply.map((item, index) => {
+		try {
+			return parseApplyInput(item)
+		} catch (err) {
+			throw new ApiParamError(`第 ${index + 1} 条：${(err as Error).message}`)
+		}
+	})
+}
+
+/** `GET .../suggestions` 的 includeWeak 解析：0/1、true/false、yes/no 都认，默认 false */
+export function parseIncludeWeak(raw: string | null): boolean {
+	const value = (raw ?? '').trim().toLowerCase()
+	return value === '1' || value === 'true' || value === 'yes'
+}
+
+/** suggest 的纯函数结果 → 写回可变 flow（version 由调用方在 updateFlow 里 +1） */
+function applyResultIntoFlow(flow: Flow, result: ApplyResult): void {
+	flow.steps = result.flow.steps
+	flow.variables = result.flow.variables
+}
+
+/** apply 之后的响应体：flow + 步骤摘要 + 重新计算的建议（建议失败不拖垮已成功的写入） */
+async function appliedResponse(
+	flow: Flow,
+): Promise<{ ok: true; flow: Flow; steps: unknown; suggestions: FlowSuggestions | null }> {
+	let suggestions: FlowSuggestions | null = null
+	try {
+		suggestions = analyzeFlow(flow, { includeWeak: false })
+	} catch (err) {
+		// 规则引擎异常不该让"已经写成功"的请求返回 500；UI 会重新拉 suggestions
+		console.error(`[studio] apply 后重算建议失败：${(err as Error).message}`)
+	}
+	return { ok: true, flow, steps: summarize(flow), suggestions }
+}
+
+/** 统一错误映射：SuggestError / 参数错 → 400（带 code），文件不存在 → 404，其余 → 500 */
+function sendSuggestError(res: ServerResponse, err: unknown): void {
+	if (err instanceof SuggestError) {
+		return json(res, 400, { error: err.message, code: err.code })
+	}
+	if (err instanceof ApiParamError) {
+		return json(res, 400, { error: err.message, code: err.code })
+	}
+	if (err instanceof Error && err.message === '流程文件不存在') {
+		return json(res, 404, { error: 'flow 不存在' })
+	}
+	console.error('[studio] 参数化建议接口失败', err)
+	json(res, 500, { error: `内部错误：${(err as Error).message}` })
+}
+
+/* ------------------------------------------------------------------ */
 /* 路由                                                                */
 /* ------------------------------------------------------------------ */
 
-async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> {
+async function handleApi(
+	config: StudioConfig,
+	req: IncomingMessage,
+	res: ServerResponse,
+	url: URL,
+): Promise<boolean> {
 	const path = url.pathname
 	if (!path.startsWith('/api/')) return false
 	const method = req.method ?? 'GET'
@@ -443,18 +607,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 	if (path === '/api/config' && method === 'GET') {
 		json(res, 200, {
 			aiEnabled: Boolean(process.env.RR_AI_ENABLED === '1'),
-			flowsDir: FLOWS_DIR,
-			artifactsDir: ARTIFACTS_DIR,
+			flowsDir: config.flowsDir,
+			artifactsDir: config.artifactsDir,
 		})
 		return true
 	}
 	if (path === '/api/flows' && method === 'GET') {
-		json(res, 200, { flows: await listFlows() })
+		json(res, 200, { flows: await listFlows(config) })
 		return true
 	}
 	const flowMatch = /^\/api\/flows\/([^/]+)$/.exec(path)
 	if (flowMatch && method === 'GET') {
-		const flowFile = flowFileFromName(decodeURIComponent(flowMatch[1]!))
+		const flowFile = flowFileFromName(config, decodeURIComponent(flowMatch[1]!))
 		if (!flowFile) return (json(res, 404, { error: 'flow 不存在' }), true)
 		const flow = await loadFlow(flowFile)
 		json(res, 200, { flow, steps: summarize(flow) })
@@ -463,7 +627,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 	const renameMatch = /^\/api\/flows\/([^/]+)\/rename$/.exec(path)
 	if (renameMatch && method === 'POST') {
 		const body = await readBody(req)
-		const flow = await updateFlow(decodeURIComponent(renameMatch[1]!), (f) => {
+		const flow = await updateFlow(config, decodeURIComponent(renameMatch[1]!), (f) => {
 			f.title = String(body.title ?? f.title)
 		})
 		json(res, 200, { ok: true, flow })
@@ -471,7 +635,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 	}
 	const deleteMatch = /^\/api\/flows\/([^/]+)\/steps\/([^/]+)\/delete$/.exec(path)
 	if (deleteMatch && method === 'POST') {
-		const flow = await updateFlow(decodeURIComponent(deleteMatch[1]!), (f) => {
+		const flow = await updateFlow(config, decodeURIComponent(deleteMatch[1]!), (f) => {
 			f.steps = f.steps.filter((s) => s.id !== deleteMatch[2])
 		})
 		json(res, 200, { ok: true, flow })
@@ -481,7 +645,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 	if (varsMatch && method === 'POST') {
 		const body = await readBody(req)
 		const next = (body.variables as Array<{ name: string; value?: string }> | undefined) ?? []
-		const flow = await updateFlow(decodeURIComponent(varsMatch[1]!), (f) => {
+		const flow = await updateFlow(config, decodeURIComponent(varsMatch[1]!), (f) => {
 			// merge 语义：已存在的变量保留 name/secret/type，只更新 defaultValue；新变量追加
 			const byName = new Map<string, Variable>(f.variables.map((v) => [v.name, v]))
 			for (const incoming of next) {
@@ -506,9 +670,86 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 		return true
 	}
 
+	// ---- 参数化建议 Phase 1（规则召回 + 一键采纳） ----
+	const suggestionsMatch = /^\/api\/flows\/([^/]+)\/suggestions$/.exec(path)
+	if (suggestionsMatch && method === 'GET') {
+		const flowFile = flowFileFromName(config, decodeURIComponent(suggestionsMatch[1]!))
+		if (!flowFile) return (json(res, 404, { error: 'flow 不存在' }), true)
+		const flow = await loadFlow(flowFile)
+		try {
+			json(res, 200, analyzeFlow(flow, { includeWeak: parseIncludeWeak(url.searchParams.get('includeWeak')) }))
+		} catch (err) {
+			sendSuggestError(res, err)
+		}
+		return true
+	}
+
+	const applyOneMatch = /^\/api\/flows\/([^/]+)\/apply-suggestion$/.exec(path)
+	if (applyOneMatch && method === 'POST') {
+		const file = decodeURIComponent(applyOneMatch[1]!)
+		if (!flowFileFromName(config, file)) return (json(res, 404, { error: 'flow 不存在' }), true)
+		try {
+			// 先校验入参，再进 updateFlow（load → apply → 校验 → saveFlow(.bak)）
+			const input = parseApplyInput(await readBody(req))
+			const flow = await updateFlow(config, file, (f) => {
+				const result = applySuggestion(f, input)
+				applyResultIntoFlow(f, result)
+				// 无论替换了几步，version 只 +1
+				f.version = f.version + 1
+			})
+			json(res, 200, await appliedResponse(flow))
+		} catch (err) {
+			sendSuggestError(res, err)
+		}
+		return true
+	}
+
+	const applyManyMatch = /^\/api\/flows\/([^/]+)\/apply-suggestions$/.exec(path)
+	if (applyManyMatch && method === 'POST') {
+		const file = decodeURIComponent(applyManyMatch[1]!)
+		if (!flowFileFromName(config, file)) return (json(res, 404, { error: 'flow 不存在' }), true)
+		try {
+			// 批量：先整体校验（parseApplyBatch 全量），再一次性 applySuggestions；
+			// mutate 抛错时 updateFlow 不会走到 saveFlow，所以文件保持原样
+			const inputs = parseApplyBatch(await readBody(req))
+			const flow = await updateFlow(config, file, (f) => {
+				const result = applySuggestions(f, inputs)
+				applyResultIntoFlow(f, result)
+				f.version = f.version + 1
+			})
+			json(res, 200, await appliedResponse(flow))
+		} catch (err) {
+			sendSuggestError(res, err)
+		}
+		return true
+	}
+
+	const renameVarMatch = /^\/api\/flows\/([^/]+)\/variables\/rename$/.exec(path)
+	if (renameVarMatch && method === 'POST') {
+		const file = decodeURIComponent(renameVarMatch[1]!)
+		if (!flowFileFromName(config, file)) return (json(res, 404, { error: 'flow 不存在' }), true)
+		try {
+			const body = await readBody(req)
+			const from = typeof body.from === 'string' ? body.from.trim() : ''
+			const to = typeof body.to === 'string' ? body.to.trim() : ''
+			if (!from) throw new ApiParamError('缺少原变量名 from')
+			if (!to) throw new ApiParamError('缺少新变量名 to')
+			if (from === to) throw new ApiParamError('新旧变量名相同，无需重命名')
+			const flow = await updateFlow(config, file, (f) => {
+				const next = renameVariable(f, from, to)
+				applyResultIntoFlow(f, { flow: next, changedStepIds: [] })
+				f.version = f.version + 1
+			})
+			json(res, 200, { ok: true, flow })
+		} catch (err) {
+			sendSuggestError(res, err)
+		}
+		return true
+	}
+
 	if (path === '/api/record/start' && method === 'POST') {
 		try {
-			json(res, 200, await startRecording(await readBody(req)))
+			json(res, 200, await startRecording(config, await readBody(req)))
 		} catch (err) {
 			json(res, 400, { error: (err as Error).message })
 		}
@@ -526,7 +767,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 	}
 	if (path === '/api/record/stop' && method === 'POST') {
 		try {
-			json(res, 200, await stopRecording(await readBody(req)))
+			json(res, 200, await stopRecording(config, await readBody(req)))
 		} catch (err) {
 			json(res, 400, { error: (err as Error).message })
 		}
@@ -545,7 +786,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 
 	if (path === '/api/play' && method === 'POST') {
 		try {
-			json(res, 200, await startPlayback(await readBody(req)))
+			json(res, 200, await startPlayback(config, await readBody(req)))
 		} catch (err) {
 			json(res, 400, { error: (err as Error).message })
 		}
@@ -562,21 +803,25 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 	return true
 }
 
-export interface StudioServerOptions {
+export interface StudioServerOptions extends Partial<StudioConfig> {
+	/** 0 = 让系统分配随机端口（测试用）；默认读 RR_STUDIO_PORT，再默认 4400 */
 	port?: number
 }
 
-export function createStudioServer(): Promise<{ port: number; close: () => Promise<void> }> {
-	const port = Number(process.env.RR_STUDIO_PORT ?? 4400)
+export function createStudioServer(
+	options: StudioServerOptions = {},
+): Promise<{ port: number; close: () => Promise<void> }> {
+	const config = resolveStudioConfig(options)
+	const port = options.port ?? Number(process.env.RR_STUDIO_PORT ?? 4400)
 	return new Promise((resolve, reject) => {
 		const server = createServer((req, res) => {
 			const url = new URL(req.url ?? '/', `http://${req.headers.host ?? '127.0.0.1'}`)
 			void (async () => {
 				try {
-					if (await handleApi(req, res, url)) return
+					if (await handleApi(config, req, res, url)) return
 					if (url.pathname.startsWith('/artifacts/')) {
 						const rel = decodeURIComponent(url.pathname.slice('/artifacts/'.length))
-						const safe = safeJoin(ARTIFACTS_DIR, rel)
+						const safe = safeJoin(config.artifactsDir, rel)
 						if (!safe) return void (res.writeHead(403), res.end())
 						await serveStatic(res, safe)
 						return
@@ -597,7 +842,7 @@ export function createStudioServer(): Promise<{ port: number; close: () => Promi
 		server.on('error', reject)
 		server.listen(port, '127.0.0.1', () => {
 			const actual = (server.address() as { port: number }).port
-			console.log(`\n  Studio 已启动：http://127.0.0.1:${actual}\n  数据目录：${FLOWS_DIR}\n`)
+			console.log(`\n  Studio 已启动：http://127.0.0.1:${actual}\n  数据目录：${config.flowsDir}\n`)
 			resolve({ port: actual, close: () => new Promise<void>((r) => server.close(() => r())) })
 		})
 	})

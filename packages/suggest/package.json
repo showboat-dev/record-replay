@@ -1,0 +1,8 @@
+{
+  "name": "@rr/suggest",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "parameterization suggestions (rule-based recall)",
+  "exports": { ".": "./src/index.ts" }
+}

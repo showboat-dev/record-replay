@@ -83,6 +83,26 @@ const KNOWN_STATUS = new Set(['pass', 'fail', 'skip', 'running', 'pending'])
 const DEFAULT_RECORD_HINT = '点「开始录制」会弹出一个浏览器窗口，你在里面正常操作，每一步都会自动记下来。'
 const KNOWN_LEVEL = new Set(['L1', 'L2', 'L3', 'L4'])
 
+/** 参数化建议（契约见 docs/parameterization.md §7） */
+const CONFIDENCE_TEXT = { high: '高', medium: '中', weak: '弱' }
+
+/** 变量类型展示（schema 允许 string/text/email/date/number/secret/file） */
+const VAR_TYPE_TEXT = {
+	string: '文本',
+	text: '多行文本',
+	email: '邮箱',
+	date: '日期',
+	number: '数字',
+	secret: '保密',
+	file: '文件',
+}
+
+/** 可被接受的变量类型（与 @rr/suggest 的 SuggestVariableType 对齐，另加 text） */
+const SUGGEST_TYPE_OPTIONS = ['string', 'text', 'email', 'date', 'number']
+
+const VARIABLE_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
+const IGNORED_STORAGE_PREFIX = 'rr-studio-ignored-suggestions'
+
 /* ------------------------------- 全局状态 ------------------------------- */
 
 const state = {
@@ -106,6 +126,11 @@ const state = {
 	ticker: null,
 	busy: Object.create(null),
 	lastRunToastKey: null,
+	suggestions: null, // FlowSuggestions | null
+	suggestionsPhase: 'idle', // idle | loading | ready | error
+	suggestionsError: '',
+	ignoredSuggestions: new Set(),
+	showIgnoredSuggestions: false,
 }
 
 const dom = {}
@@ -243,7 +268,9 @@ async function api(path, options) {
 		else if (data && data.error && typeof data.error.message === 'string') message = data.error.message
 		else if (data && typeof data.message === 'string') message = data.message
 		if (!message) message = `服务返回了错误（HTTP ${response.status}）`
-		throw new Error(message)
+		const error = new Error(message)
+		error.status = response.status
+		throw error
 	}
 
 	if (data === null) throw new Error('服务返回的不是有效数据，请重试或重启控制台')
@@ -395,6 +422,462 @@ function openZoom(src, name) {
 	if (closeButton) closeButton.addEventListener('click', close)
 }
 
+/* --------------------------- 参数化建议交互 ------------------------------ */
+
+/** 通用弹窗外壳：统一 Esc / 点遮罩关闭 / 焦点归还 */
+function createModal(options) {
+	const cfg = options || {}
+	const root = dom.modalRoot
+	const previousFocus = document.activeElement
+	root.innerHTML = `<div class="modal-overlay" data-modal="${esc(cfg.name || 'dialog')}">
+		<div class="modal-card ${cfg.dialogClass || ''}" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+			<h3 id="modal-title">${esc(cfg.title || '')}</h3>
+			${cfg.bodyHtml || ''}
+			<div class="modal-actions">${cfg.actionsHtml || ''}</div>
+		</div>
+	</div>`
+
+	const overlay = root.querySelector('.modal-overlay')
+	let closed = false
+	const onKey = (event) => {
+		if (event.key === 'Escape') {
+			event.preventDefault()
+			close(null)
+		}
+	}
+	const close = (value) => {
+		if (closed) return
+		closed = true
+		document.removeEventListener('keydown', onKey)
+		root.innerHTML = ''
+		if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus()
+		if (typeof cfg.onClose === 'function') cfg.onClose(value)
+	}
+	document.addEventListener('keydown', onKey)
+	overlay.addEventListener('click', (event) => {
+		if (event.target === overlay) close(null)
+	})
+	return { root, overlay, close }
+}
+
+/** 接受建议弹窗：变量名（实时校验/重名提示）、类型、同值批量、理由 */
+function suggestionApplyDialog(suggestion, options) {
+	const opts = options || {}
+	const file = state.selectedFile
+	if (!file || !suggestion) return Promise.resolve(null)
+
+	const maps = stepTitleMaps()
+	const groupIds =
+		suggestion.group && Array.isArray(suggestion.group.stepIds) ? suggestion.group.stepIds : []
+	const hasGroup = groupIds.length > 1
+	const groupItems = groupIds
+		.map((id) => {
+			const step = maps.byId.get(id)
+			const no = maps.noById.get(id)
+			return `<li>第 ${esc(no || '?')} 步 ${esc(step && step.title ? step.title : '同值步骤')}</li>`
+		})
+		.join('')
+	const typeOptions = SUGGEST_TYPE_OPTIONS.map((type) => {
+		const selected = type === (suggestion.suggestedType || 'string') ? ' selected' : ''
+		return `<option value="${esc(type)}"${selected}>${esc(VAR_TYPE_TEXT[type] || type)}</option>`
+	}).join('')
+	const reasons = Array.isArray(suggestion.reasons) ? suggestion.reasons.filter(Boolean) : []
+	const reasonsHtml = reasons.length
+		? `<div class="dialog-reasons"><span class="dialog-label">为什么这样建议</span><ul>${reasons
+				.map((reason) => `<li>${esc(reason)}</li>`)
+				.join('')}</ul></div>`
+		: ''
+
+	return new Promise((resolve) => {
+		const modal = createModal({
+			name: 'suggest-apply',
+			dialogClass: 'modal-suggest',
+			title: '参数化这一步',
+			bodyHtml: `<form class="suggest-form" novalidate>
+				<p class="dialog-lead">把写死的值换成运行参数，以后回放时可以填不同的值。</p>
+				<div class="dialog-field">
+					<label class="dialog-label" for="suggest-name-input">变量名</label>
+					<input id="suggest-name-input" class="dialog-input" type="text" spellcheck="false" autocomplete="off" value="${esc(suggestion.suggestedName || '')}" />
+					<p class="dialog-hint" id="suggest-name-hint"></p>
+				</div>
+				<div class="dialog-field">
+					<label class="dialog-label" for="suggest-type-input">类型</label>
+					<select id="suggest-type-input" class="dialog-input">${typeOptions}</select>
+				</div>
+				<div class="dialog-preview" id="suggest-preview"></div>
+				${
+					hasGroup
+						? `<label class="dialog-check"><input type="checkbox" id="suggest-same-input" checked /> 同值一起替换（${groupIds.length} 处）</label>
+							<ul class="dialog-group-list">${groupItems}</ul>`
+						: ''
+				}
+				${reasonsHtml}
+				<p class="dialog-error" id="suggest-dialog-error" hidden></p>
+			</form>`,
+			actionsHtml: `<button type="button" class="btn btn-ghost" data-dialog-action="cancel">取消</button>
+				<button type="button" class="btn btn-primary" data-dialog-action="confirm">确认参数化</button>`,
+			onClose: (value) => resolve(value || null),
+		})
+
+		const nameInput = modal.root.querySelector('#suggest-name-input')
+		const typeSelect = modal.root.querySelector('#suggest-type-input')
+		const sameCheckbox = modal.root.querySelector('#suggest-same-input')
+		const previewNode = modal.root.querySelector('#suggest-preview')
+		const hintNode = modal.root.querySelector('#suggest-name-hint')
+		const errorNode = modal.root.querySelector('#suggest-dialog-error')
+		const confirmButton = modal.root.querySelector('[data-dialog-action="confirm"]')
+		const cancelButton = modal.root.querySelector('[data-dialog-action="cancel"]')
+
+		const showError = (message) => {
+			errorNode.textContent = message
+			errorNode.hidden = !message
+		}
+		const updatePreview = () => {
+			const name = nameInput.value.trim() || '变量名'
+			previewNode.innerHTML = `当前值 <code>${esc(
+				truncateText(String(suggestion.currentValue || ''), 40)
+			)}</code> → <code>{{${esc(name)}}}</code>`
+		}
+		const validate = () => {
+			const value = nameInput.value.trim()
+			let hard = ''
+			let soft = ''
+			if (!value) hard = '变量名不能为空'
+			else if (!VARIABLE_NAME_RE.test(value)) hard = '只能用英文字母、数字和下划线，且不能以数字开头'
+			else {
+				const existing = variableDefs()
+					.map((item) => item && item.name)
+					.filter(Boolean)
+				if (existing.includes(value)) soft = `已经有同名参数「${value}」了，确认后会复用它`
+				const other = activeSuggestions().find(
+					(item) => item.stepId !== suggestion.stepId && item.suggestedName === value
+				)
+				if (!soft && other) soft = `另一条建议也叫「${value}」，建议换个名字`
+			}
+			hintNode.textContent = hard || soft
+			hintNode.classList.toggle('is-error', Boolean(hard))
+			hintNode.classList.toggle('is-warning', !hard && Boolean(soft))
+			confirmButton.disabled = Boolean(hard)
+			return hard
+		}
+		const submit = async () => {
+			if (validate()) {
+				nameInput.focus()
+				return
+			}
+			const name = nameInput.value.trim()
+			confirmButton.disabled = true
+			confirmButton.innerHTML = '<span class="spinner"></span>处理中…'
+			showError('')
+			try {
+				const res = await api(
+					`/api/flows/${encodeURIComponent(file)}/apply-suggestion`,
+					{
+						method: 'POST',
+						body: {
+							stepId: suggestion.stepId,
+							name,
+							type: typeSelect.value,
+							applySameValue: hasGroup ? Boolean(sameCheckbox && sameCheckbox.checked) : false,
+						},
+					}
+				)
+				modal.close({ name, res })
+			} catch (err) {
+				confirmButton.textContent = '确认参数化'
+				confirmButton.disabled = false
+				showError(err.message)
+			}
+		}
+
+		nameInput.addEventListener('input', () => {
+			validate()
+			updatePreview()
+		})
+		nameInput.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') {
+				event.preventDefault()
+				void submit()
+			}
+		})
+		cancelButton.addEventListener('click', () => modal.close(null))
+		confirmButton.addEventListener('click', () => void submit())
+
+		validate()
+		updatePreview()
+		if (opts.focus === 'name') {
+			nameInput.focus()
+			nameInput.select()
+		} else {
+			confirmButton.focus()
+		}
+	})
+}
+
+async function openSuggestionDialog(stepId, mode) {
+	if (!state.detail || state.recording) return
+	const id = String(stepId || '')
+	const suggestion = allSuggestions().find((item) => item.stepId === id)
+	if (!suggestion) {
+		toast('这条建议已经不存在了，正在刷新建议', 'info')
+		await loadSuggestions(state.selectedFile)
+		return
+	}
+	const result = await suggestionApplyDialog(suggestion, {
+		focus: mode === 'modify' ? 'name' : 'confirm',
+	})
+	if (!result) return
+	toast(`已参数化：写死的值换成了 {{${result.name}}}`, 'success')
+	await applyFlowResult(result.res)
+}
+
+function mergeVariables(current, next) {
+	const out = Object.create(null)
+	for (const name of Object.keys(next || {})) {
+		out[name] =
+			current && Object.prototype.hasOwnProperty.call(current, name) ? current[name] : next[name]
+	}
+	return out
+}
+
+function uniqueVariableName(base, taken) {
+	let name = String(base || '').trim()
+	if (!VARIABLE_NAME_RE.test(name)) name = 'field'
+	if (!taken.has(name)) return name
+	let index = 2
+	while (taken.has(`${name}_${index}`)) index += 1
+	return `${name}_${index}`
+}
+
+/** 应用接口返回 {ok, flow, steps, suggestions}；字段缺失时退回重新拉取 */
+async function applyFlowResult(res) {
+	const file = state.selectedFile
+	if (!file) return
+	const oldVersion = suggestionVersion()
+	const payload = res && typeof res === 'object' ? res : null
+
+	if (payload && payload.flow && Array.isArray(payload.steps) && payload.suggestions) {
+		state.detail = { flow: payload.flow, steps: payload.steps }
+		state.detailPhase = 'ready'
+		state.detailError = ''
+		state.suggestions = normalizeSuggestions(payload.suggestions)
+		state.suggestionsPhase = 'ready'
+		state.suggestionsError = ''
+		const newVersion = suggestionVersion()
+		if (oldVersion !== newVersion) persistIgnoredForVersion(newVersion)
+		state.variables = mergeVariables(state.variables, buildVariables(payload.flow))
+		state.bottomKey = null
+		state.varsBuiltKey = null
+		renderAll()
+		void loadFlows({ silent: true })
+		return
+	}
+	await reloadDetail()
+	void loadFlows({ silent: true })
+}
+
+async function acceptAllSuggestions() {
+	if (!state.detail || state.recording || !state.selectedFile) return
+	const running = Boolean(
+		state.run && (state.run.status === 'starting' || state.run.status === 'running')
+	)
+	if (running) {
+		toast('回放进行中，等它跑完再接受建议', 'info')
+		return
+	}
+	const active = activeSuggestions()
+	if (!active.length) return
+
+	const taken = new Set(variableDefs().map((item) => item && item.name).filter(Boolean))
+	const seen = new Set()
+	const batch = []
+	for (const suggestion of active) {
+		if (seen.has(suggestion.stepId)) continue
+		const groupIds =
+			suggestion.group && Array.isArray(suggestion.group.stepIds) ? suggestion.group.stepIds : []
+		const applySameValue = groupIds.length > 1
+		const name = uniqueVariableName(suggestion.suggestedName, taken)
+		taken.add(name)
+		batch.push({
+			stepId: suggestion.stepId,
+			name,
+			type: suggestion.suggestedType || 'string',
+			applySameValue,
+		})
+		if (applySameValue) for (const id of groupIds) seen.add(id)
+		else seen.add(suggestion.stepId)
+	}
+	if (!batch.length) return
+
+	const ok = await confirmDialog({
+		title: `全部接受 ${batch.length} 条建议？`,
+		body: `会新增这些运行参数：${batch.map((item) => item.name).join('、')}。流程里对应的写死值会变成 {{变量名}}，同值的步骤会一起替换。`,
+		confirmText: '全部接受',
+		danger: false,
+	})
+	if (!ok) return
+
+	try {
+		const res = await api(
+			`/api/flows/${encodeURIComponent(state.selectedFile)}/apply-suggestions`,
+			{ method: 'POST', body: { apply: batch } }
+		)
+		toast(`已参数化 ${batch.length} 条建议`, 'success')
+		await applyFlowResult(res)
+	} catch (err) {
+		// 后端还没实现批量接口时，退化为逐条应用（契约允许"依次 POST"）
+		if (err && (err.status === 404 || err.status === 405)) {
+			await applyBatchSequentially(batch)
+			return
+		}
+		showErrorBanner(`批量参数化失败：${err.message}`)
+	}
+}
+
+async function applyBatchSequentially(batch) {
+	let done = 0
+	for (const item of batch) {
+		try {
+			await api(`/api/flows/${encodeURIComponent(state.selectedFile)}/apply-suggestion`, {
+				method: 'POST',
+				body: item,
+			})
+			done += 1
+		} catch (err) {
+			toast(`批量参数化中断：已完成 ${done} 条（${err.message}）`, 'error')
+			await reloadDetail()
+			return
+		}
+	}
+	toast(`已参数化 ${done} 条建议`, 'success')
+	await reloadDetail()
+	void loadFlows({ silent: true })
+}
+
+/** 单输入框弹窗（变量重命名用），自带校验与提交错误回显 */
+function textPromptDialog(options) {
+	const cfg = options || {}
+	return new Promise((resolve) => {
+		const modal = createModal({
+			name: 'text-prompt',
+			dialogClass: 'modal-prompt',
+			title: cfg.title || '请填写',
+			bodyHtml: `<form class="suggest-form" novalidate>
+				${cfg.lead ? `<p class="dialog-lead">${esc(cfg.lead)}</p>` : ''}
+				<div class="dialog-field">
+					<label class="dialog-label" for="prompt-input">${esc(cfg.label || '')}</label>
+					<input id="prompt-input" class="dialog-input" type="text" spellcheck="false" autocomplete="off" value="${esc(cfg.value || '')}" />
+					<p class="dialog-hint" id="prompt-hint">${esc(cfg.hint || '')}</p>
+				</div>
+				<p class="dialog-error" id="prompt-error" hidden></p>
+			</form>`,
+			actionsHtml: `<button type="button" class="btn btn-ghost" data-dialog-action="cancel">取消</button>
+				<button type="button" class="btn btn-primary" data-dialog-action="confirm">${esc(cfg.confirmText || '确定')}</button>`,
+			onClose: (value) => resolve(value || null),
+		})
+
+		const input = modal.root.querySelector('#prompt-input')
+		const hintNode = modal.root.querySelector('#prompt-hint')
+		const errorNode = modal.root.querySelector('#prompt-error')
+		const confirmButton = modal.root.querySelector('[data-dialog-action="confirm"]')
+		const cancelButton = modal.root.querySelector('[data-dialog-action="cancel"]')
+
+		const showError = (message) => {
+			errorNode.textContent = message
+			errorNode.hidden = !message
+		}
+		const validate = () => {
+			const value = input.value.trim()
+			const message = typeof cfg.validate === 'function' ? cfg.validate(value) : ''
+			hintNode.textContent = message || cfg.hint || ''
+			hintNode.classList.toggle('is-error', Boolean(message))
+			confirmButton.disabled = Boolean(message)
+			return message ? null : value
+		}
+		const submit = async () => {
+			const value = validate()
+			if (!value) {
+				input.focus()
+				return
+			}
+			confirmButton.disabled = true
+			confirmButton.innerHTML = '<span class="spinner"></span>处理中…'
+			showError('')
+			try {
+				await cfg.submit(value)
+				modal.close(value)
+			} catch (err) {
+				confirmButton.textContent = cfg.confirmText || '确定'
+				confirmButton.disabled = false
+				showError(err.message)
+			}
+		}
+
+		input.addEventListener('input', () => {
+			validate()
+			showError('')
+		})
+		input.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') {
+				event.preventDefault()
+				void submit()
+			}
+		})
+		cancelButton.addEventListener('click', () => modal.close(null))
+		confirmButton.addEventListener('click', () => void submit())
+
+		validate()
+		input.focus()
+		input.select()
+	})
+}
+
+async function renameVariable(fromName) {
+	if (!fromName || !state.selectedFile || state.recording) return
+	const file = state.selectedFile
+	const ignoredBefore = new Set(state.ignoredSuggestions)
+	const result = await textPromptDialog({
+		title: '重命名运行参数',
+		lead: `把「${fromName}」换成更好懂的名字，流程里用到它的地方会自动跟着改。`,
+		label: '新的参数名',
+		value: fromName,
+		hint: '只能用英文字母、数字和下划线，且不能以数字开头',
+		confirmText: '重命名',
+		validate: (value) => {
+			if (!value) return '参数名不能为空'
+			if (!VARIABLE_NAME_RE.test(value)) return '只能用英文字母、数字和下划线，且不能以数字开头'
+			if (value === fromName) return '和原来的名字一样'
+			if (variableDefs().some((item) => item && item.name === value)) {
+				return `已经有同名参数「${value}」了`
+			}
+			return ''
+		},
+		submit: async (value) => {
+			await api(`/api/flows/${encodeURIComponent(file)}/variables/rename`, {
+				method: 'POST',
+				body: { from: fromName, to: value },
+			})
+		},
+	})
+	if (!result) return
+
+	if (Object.prototype.hasOwnProperty.call(state.variables, fromName) || result in state.variables) {
+		state.variables[result] = state.variables[fromName]
+		delete state.variables[fromName]
+	}
+	state.bottomKey = null
+	state.varsBuiltKey = null
+	toast(`已把「${fromName}」改名为「${result}」`, 'success')
+	await reloadDetail()
+	// 重命名会让 version+1，忽略状态的 key 跟着变，这里把已忽略项带到新版本
+	if (ignoredBefore.size) {
+		state.ignoredSuggestions = ignoredBefore
+		persistIgnoredForVersion(suggestionVersion())
+		renderAll()
+	}
+	void loadFlows({ silent: true })
+}
+
 /* ------------------------------ 流程列表 -------------------------------- */
 
 async function loadConfig() {
@@ -502,26 +985,171 @@ async function selectFlow(file) {
 	state.run = null
 	state.bottomKey = null
 	state.varsBuiltKey = null
+	state.suggestions = null
+	state.suggestionsPhase = 'loading'
+	state.suggestionsError = ''
+	state.ignoredSuggestions = new Set()
+	state.showIgnoredSuggestions = false
 	renderAll()
 
+	// detail 与 suggestions 并行拉取；建议失败只影响建议区，不阻塞主流程
+	await Promise.all([loadDetail(file), loadSuggestions(file)])
+	if (state.selectedFile !== file) return
+
 	try {
-		const data = await api(`/api/flows/${encodeURIComponent(file)}`)
-		if (state.selectedFile !== file) return
+		const url = new URL(window.location.href)
+		url.searchParams.set('file', file)
+		window.history.replaceState(null, '', url)
+	} catch {
+		/* 深链接不是关键功能，失败忽略 */
+	}
+	renderAll()
+}
+
+/** 拉流程详情；首次选择会重置变量默认值（reloadDetail 不重置） */
+async function loadDetail(file) {
+	const target = file || state.selectedFile
+	if (!target) return
+	try {
+		const data = await api(`/api/flows/${encodeURIComponent(target)}`)
+		if (state.selectedFile !== target) return
 		state.detail = { flow: data.flow || {}, steps: Array.isArray(data.steps) ? data.steps : [] }
 		state.detailPhase = 'ready'
+		state.detailError = ''
 		state.variables = buildVariables(data.flow)
-		try {
-			const url = new URL(window.location.href)
-			url.searchParams.set('file', file)
-			window.history.replaceState(null, '', url)
-		} catch {
-			/* 深链接不是关键功能，失败忽略 */
-		}
 	} catch (err) {
-		if (state.selectedFile !== file) return
+		if (state.selectedFile !== target) return
 		state.detailPhase = 'error'
 		state.detailError = err.message
 	}
+	renderAll()
+}
+
+/** 拉参数化建议（独立失败域：失败只在建议区提示，不影响回放/录制） */
+async function loadSuggestions(file) {
+	const target = file || state.selectedFile
+	if (!target) return
+	state.suggestionsPhase = 'loading'
+	state.suggestionsError = ''
+	renderAll()
+
+	try {
+		const data = await api(
+			`/api/flows/${encodeURIComponent(target)}/suggestions?includeWeak=0`
+		)
+		if (state.selectedFile !== target) return
+		state.suggestions = normalizeSuggestions(data)
+		state.suggestionsPhase = 'ready'
+		state.ignoredSuggestions = loadIgnoredSuggestions(target, suggestionVersion())
+	} catch (err) {
+		if (state.selectedFile !== target) return
+		state.suggestions = null
+		state.suggestionsPhase = 'error'
+		state.suggestionsError = err.message
+	}
+	renderAll()
+}
+
+function normalizeSuggestions(data) {
+	const payload = data || {}
+	return {
+		generatedAt: payload.generatedAt ? String(payload.generatedAt) : '',
+		flowVersion: Number(payload.flowVersion) || 0,
+		suggestions: Array.isArray(payload.suggestions)
+			? payload.suggestions.filter((item) => item && item.stepId)
+			: [],
+		skipped: Array.isArray(payload.skipped) ? payload.skipped : [],
+	}
+}
+
+function suggestionVersion() {
+	if (state.suggestions && state.suggestions.flowVersion) return state.suggestions.flowVersion
+	const flow = state.detail && state.detail.flow
+	return Number(flow && flow.version) || 0
+}
+
+function allSuggestions() {
+	if (!state.suggestions || !Array.isArray(state.suggestions.suggestions)) return []
+	return state.suggestions.suggestions
+}
+
+function isSuggestionIgnored(stepId) {
+	return state.ignoredSuggestions.has(String(stepId || ''))
+}
+
+function activeSuggestions() {
+	return allSuggestions().filter((item) => !isSuggestionIgnored(item.stepId))
+}
+
+function ignoredSuggestions() {
+	return allSuggestions().filter((item) => isSuggestionIgnored(item.stepId))
+}
+
+function suggestionByStepId(stepId) {
+	if (state.recording) return null
+	const id = String(stepId || '')
+	return allSuggestions().find((item) => item.stepId === id) || null
+}
+
+/* 忽略状态只存 localStorage，不写 IR（契约 §7.1）；key 含 file + flowVersion */
+function ignoredStorageKey(file, version) {
+	return `${IGNORED_STORAGE_PREFIX}:${file}@v${version}`
+}
+
+function loadIgnoredSuggestions(file, version) {
+	const set = new Set()
+	try {
+		const raw = window.localStorage.getItem(ignoredStorageKey(file, version))
+		if (!raw) return set
+		const list = JSON.parse(raw)
+		if (Array.isArray(list)) {
+			for (const id of list) if (typeof id === 'string') set.add(id)
+		}
+	} catch {
+		/* localStorage 不可用（隐私模式等）时降级为内存态 */
+	}
+	return set
+}
+
+function saveIgnoredSuggestions() {
+	const file = state.selectedFile
+	if (!file) return
+	try {
+		window.localStorage.setItem(
+			ignoredStorageKey(file, suggestionVersion()),
+			JSON.stringify([...state.ignoredSuggestions])
+		)
+	} catch {
+		/* 忽略持久化失败，不影响当前会话 */
+	}
+}
+
+/** apply 会让 flow.version+1，把忽略状态迁移到新版本，避免已忽略的建议"复活" */
+function persistIgnoredForVersion(version) {
+	const file = state.selectedFile
+	if (!file) return
+	try {
+		window.localStorage.setItem(
+			ignoredStorageKey(file, version),
+			JSON.stringify([...state.ignoredSuggestions])
+		)
+	} catch {
+		/* 忽略 */
+	}
+}
+
+function setSuggestionIgnored(stepId, ignored) {
+	const id = String(stepId || '')
+	if (!id) return
+	if (ignored) state.ignoredSuggestions.add(id)
+	else state.ignoredSuggestions.delete(id)
+	saveIgnoredSuggestions()
+	renderAll()
+	if (ignored) toast('已忽略这条建议，可以点「显示已忽略」找回', 'info')
+}
+
+function toggleIgnoredSuggestions() {
+	state.showIgnoredSuggestions = !state.showIgnoredSuggestions
 	renderAll()
 }
 
@@ -538,6 +1166,8 @@ async function reloadDetail() {
 		state.detailError = err.message
 	}
 	renderAll()
+	// 步骤变了，建议也要重新算（失败只提示建议区）
+	await loadSuggestions(state.selectedFile)
 }
 
 function buildVariables(flow) {
@@ -558,6 +1188,14 @@ function variableDefs() {
 
 function isSecretVariable(variable) {
 	return Boolean(variable) && (variable.secret === true || variable.type === 'secret')
+}
+
+/** 归一化变量类型（secret 优先，未知类型回落到 string） */
+function variableType(variable) {
+	const item = variable || {}
+	if (isSecretVariable(item)) return 'secret'
+	const type = String(item.type || 'string')
+	return VAR_TYPE_TEXT[type] ? type : 'string'
 }
 
 /* ------------------------------ 渲染：总入口 ----------------------------- */
@@ -812,6 +1450,52 @@ function renderTimeline() {
 	setHtml(host, steps.map((step, index) => stepRowHtml(step, index, steps, results, true)).join(''))
 }
 
+function confidenceKey(confidence) {
+	const value = String(confidence || '').toLowerCase()
+	return value === 'high' || value === 'medium' || value === 'weak' ? value : 'medium'
+}
+
+function truncateText(value, maxLength) {
+	const text = String(value === null || value === undefined ? '' : value)
+	if (text.length <= maxLength) return text
+	return `${text.slice(0, maxLength)}…`
+}
+
+/** 步骤行里的「建议参数化」块：💡 建议参数化：name（高/中）+ 接受/修改/忽略 */
+function suggestionInlineHtml(suggestion) {
+	const stepId = String(suggestion.stepId || '')
+	const ignored = isSuggestionIgnored(stepId)
+	const confidence = CONFIDENCE_TEXT[suggestion.confidence] || ''
+	const name = String(suggestion.suggestedName || '')
+	const value = String(suggestion.currentValue || '')
+	const groupCount =
+		suggestion.group && Array.isArray(suggestion.group.stepIds) ? suggestion.group.stepIds.length : 0
+	const reasons = Array.isArray(suggestion.reasons) ? suggestion.reasons.filter(Boolean) : []
+	const reasonsHtml = reasons.length
+		? `<details class="suggest-reasons"><summary>为什么这样建议</summary><ul>${reasons
+				.map((reason) => `<li>${esc(reason)}</li>`)
+				.join('')}</ul></details>`
+		: ''
+	const actions = ignored
+		? `<button type="button" class="btn btn-tiny btn-ghost" data-action="suggest-restore" data-step-id="${esc(stepId)}">恢复建议</button>`
+		: `<button type="button" class="btn btn-tiny btn-primary" data-action="suggest-accept" data-step-id="${esc(stepId)}">接受</button>
+			<button type="button" class="btn btn-tiny btn-ghost" data-action="suggest-modify" data-step-id="${esc(stepId)}">修改</button>
+			<button type="button" class="btn btn-tiny btn-ghost" data-action="suggest-ignore" data-step-id="${esc(stepId)}">忽略</button>`
+
+	return `<div class="suggest-row${ignored ? ' is-ignored' : ''}" data-suggest-step="${esc(stepId)}">
+		<div class="suggest-line">
+			<span class="suggest-pill">💡 建议参数化</span>
+			<code class="suggest-name">${esc(name || '未命名')}</code>
+			${confidence ? `<span class="chip chip-conf-${confidenceKey(suggestion.confidence)}">置信${esc(confidence)}</span>` : ''}
+			${groupCount > 1 ? `<span class="chip chip-kind">同值 ${groupCount} 处</span>` : ''}
+			${ignored ? '<span class="chip chip-suggest-ignored">已忽略</span>' : ''}
+			${value ? `<span class="suggest-value" title="${esc(value)}">当前值「${esc(truncateText(value, 26))}」</span>` : ''}
+			<span class="suggest-buttons">${actions}</span>
+		</div>
+		${reasonsHtml}
+	</div>`
+}
+
 function stepRowHtml(step, index, allSteps, results, allowDelete) {
 	const item = step || {}
 	const result = results ? results.get(item.id) : null
@@ -833,6 +1517,10 @@ function stepRowHtml(step, index, allSteps, results, allowDelete) {
 	const description =
 		item.description && item.description !== item.title ? String(item.description) : ''
 	const expect = item.expect ? String(item.expect) : ''
+	const suggestion = recording ? null : suggestionByStepId(item.id)
+	const showSuggestion =
+		suggestion && (state.showIgnoredSuggestions || !isSuggestionIgnored(suggestion.stepId))
+	const suggestionHtml = showSuggestion ? suggestionInlineHtml(suggestion) : ''
 
 	const badges = []
 	if (kindText) badges.push(`<span class="chip chip-kind">${esc(kindText)}</span>`)
@@ -862,6 +1550,7 @@ function stepRowHtml(step, index, allSteps, results, allowDelete) {
 			${description ? `<div class="step-desc">${esc(description)}</div>` : ''}
 			${expect ? `<div class="step-expect" title="原始校验点：${esc(expect)}">校验点：${esc(humanizeExpect(expect))}</div>` : ''}
 			${reasonHtml}
+			${suggestionHtml}
 		</div>
 		<div class="step-side">
 			${badges.length ? `<div class="step-badges">${badges.join('')}</div>` : ''}
@@ -900,7 +1589,7 @@ function renderBottom() {
 	const signature = state.recording
 		? `rec:${state.recording.sessionId}`
 		: `flow:${state.selectedFile}:${variableDefs()
-				.map((v) => `${v && v.name}:${isSecretVariable(v) ? 's' : 'p'}`)
+				.map((v) => `${v && v.name}:${(v && v.type) || ''}:${isSecretVariable(v) ? 's' : 'p'}`)
 				.join(',')}`
 
 	if (state.bottomKey !== signature) {
@@ -909,6 +1598,7 @@ function renderBottom() {
 		rendered.delete(host)
 	}
 
+	renderSuggestHost()
 	renderVarsHost()
 	renderRunHost()
 	updatePlayControls()
@@ -933,8 +1623,74 @@ function bottomShellHtml() {
 			<button id="btn-selfcheck" class="btn btn-ghost" type="button" data-action="selfcheck" title="后台静默跑一遍，不打开窗口">✓ 自检</button>
 		</div>
 	</div>
+	<div id="suggest-host" class="suggest-host"></div>
 	<div id="vars-host" class="vars-host"></div>
 	<div id="run-host" class="run-host"></div>`
+}
+
+/** 底部批量条：N 条建议 + 全部接受 + 显示已忽略；加载/失败/空态也在这里提示 */
+function renderSuggestHost() {
+	const host = $('suggest-host')
+	if (!host) return
+
+	if (state.recording || !state.detail) {
+		setHtml(host, '')
+		return
+	}
+
+	const phase = state.suggestionsPhase
+	if (phase === 'loading' || phase === 'idle') {
+		setHtml(
+			host,
+			'<div class="suggest-bar is-muted"><span class="spinner"></span>正在分析哪些值适合做运行参数…</div>'
+		)
+		return
+	}
+
+	if (phase === 'error') {
+		setHtml(
+			host,
+			`<div class="suggest-bar is-error">
+				<span>建议加载失败：${esc(state.suggestionsError || '未知原因')}</span>
+				<span class="suggest-value">不影响回放，可以稍后重试</span>
+				<button type="button" class="btn btn-tiny btn-ghost" data-action="suggest-retry">重试</button>
+			</div>`
+		)
+		return
+	}
+
+	const total = allSuggestions().length
+	if (!total) {
+		const skipped = state.suggestions && Array.isArray(state.suggestions.skipped) ? state.suggestions.skipped : []
+		const skippedHtml = skipped.length
+			? `<details class="suggest-skipped"><summary>已跳过 ${skipped.length} 步</summary><ul>${skipped
+					.slice(0, 20)
+					.map((item) => `<li>${esc((item && item.reason) || '不适合参数化')}</li>`)
+					.join('')}</ul></details>`
+			: ''
+		setHtml(
+			host,
+			`<div class="suggest-bar is-muted"><span>✅ 没有发现需要参数化的值</span>${skippedHtml}</div>`
+		)
+		return
+	}
+
+	const active = activeSuggestions()
+	const ignored = ignoredSuggestions()
+	const running = Boolean(
+		state.run && (state.run.status === 'starting' || state.run.status === 'running')
+	)
+	const label = active.length
+		? `<span class="suggest-batch-label">💡 参数化建议 <b>${active.length}</b> 条</span>
+			<button type="button" class="btn btn-tiny btn-primary" data-action="suggest-accept-all" ${running ? 'disabled' : ''}>全部接受</button>`
+		: `<span class="suggest-batch-label">建议都处理完了（已忽略 ${ignored.length} 条）</span>`
+	const toggle = ignored.length
+		? `<button type="button" class="btn btn-tiny btn-ghost" data-action="suggest-toggle-ignored">${
+				state.showIgnoredSuggestions ? '隐藏已忽略' : `显示已忽略（${ignored.length}）`
+			}</button>`
+		: ''
+
+	setHtml(host, `<div class="suggest-bar">${label}${toggle}</div>`)
 }
 
 function renderVarsHost() {
@@ -979,17 +1735,29 @@ function renderVarsHost() {
 function varFieldHtml(variable) {
 	const item = variable || {}
 	const name = String(item.name || '')
-	const secret = isSecretVariable(item)
+	const type = variableType(item)
+	const secret = type === 'secret'
 	const hasDefault = !secret && typeof item.defaultValue === 'string' && item.defaultValue !== ''
-	const note = secret ? '输入时隐藏' : hasDefault ? '已按默认值填好，可修改' : '必填'
-	const chip = secret ? '<span class="chip chip-kind">保密</span>' : ''
+	const note =
+		type === 'file'
+			? '填文件绝对路径'
+			: secret
+				? '输入时隐藏'
+				: hasDefault
+					? '已按默认值填好，可修改'
+					: '必填'
+	const typeChip = `<span class="chip chip-var chip-var-${esc(type)}" title="参数类型：${esc(VAR_TYPE_TEXT[type] || type)}">${esc(VAR_TYPE_TEXT[type] || type)}</span>`
+	const placeholder = type === 'file' ? '例如 /Users/you/报价单.pdf' : secret ? '请输入' : ''
 	const toggle = secret
 		? `<button type="button" class="btn-eye" data-action="toggle-secret" data-target="${esc(name)}" aria-label="显示或隐藏 ${esc(name)}">显示</button>`
 		: ''
 	return `<div class="var-item">
-		<span class="var-label"><code>${esc(name)}</code>${chip}<span>${esc(note)}</span></span>
+		<span class="var-label">
+			<code>${esc(name)}</code>${typeChip}<span class="var-note">${esc(note)}</span>
+			<button type="button" class="btn btn-tiny btn-ghost var-rename" data-action="rename-var" data-name="${esc(name)}" title="给这个参数换个更好懂的名字">重命名</button>
+		</span>
 		<span class="var-input-row">
-			<input type="${secret ? 'password' : 'text'}" data-var="${esc(name)}" ${secret ? 'data-secret="1"' : ''} autocomplete="off" spellcheck="false" placeholder="${secret ? '请输入' : ''}" aria-label="${esc(name)}" />
+			<input type="${secret ? 'password' : 'text'}" data-var="${esc(name)}" ${secret ? 'data-secret="1"' : ''} autocomplete="off" spellcheck="false" placeholder="${esc(placeholder)}" aria-label="${esc(name)}" />
 			${toggle}
 		</span>
 	</div>`
@@ -1783,6 +2551,30 @@ function handleClick(event) {
 		}
 		case 'banner-close':
 			setBanner(null)
+			return
+		case 'suggest-accept':
+			void openSuggestionDialog(target.getAttribute('data-step-id') || '', 'confirm')
+			return
+		case 'suggest-modify':
+			void openSuggestionDialog(target.getAttribute('data-step-id') || '', 'name')
+			return
+		case 'suggest-ignore':
+			setSuggestionIgnored(target.getAttribute('data-step-id') || '', true)
+			return
+		case 'suggest-restore':
+			setSuggestionIgnored(target.getAttribute('data-step-id') || '', false)
+			return
+		case 'suggest-accept-all':
+			void acceptAllSuggestions()
+			return
+		case 'suggest-toggle-ignored':
+			toggleIgnoredSuggestions()
+			return
+		case 'suggest-retry':
+			void loadSuggestions(state.selectedFile)
+			return
+		case 'rename-var':
+			void renameVariable(target.getAttribute('data-name') || '')
 			return
 		default:
 			return
