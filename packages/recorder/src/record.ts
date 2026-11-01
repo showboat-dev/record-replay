@@ -42,7 +42,7 @@ import {
 	normalizeEmitPayload,
 	readFactsByUid,
 	readFactsFromHandle,
-	screenshotElement,
+	screenshotRegion,
 	snapshotPage,
 	validateCandidates,
 } from './capture-client.js'
@@ -248,11 +248,19 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 			}
 
 			// 元素裁剪图（crop.ref 相对 artifacts/<flowId>/）
+			// 用非滚动截图（page.screenshot + clip）：不改变页面滚动/焦点，否则会录到"自己造成的滚动"
 			let crop: ElementRef['crop']
 			if (locator) {
 				const ref = `record/elements/${stepIndex}.png`
 				await ensureElementsDir()
-				if (await screenshotElement(locator, join(elementsDir, `${stepIndex}.png`))) {
+				const shot = await screenshotRegion(
+					page,
+					frame,
+					merged.rect ?? facts.rect,
+					merged.scroll ?? facts.scroll ?? { x: 0, y: 0 },
+					join(elementsDir, `${stepIndex}.png`),
+				)
+				if (shot) {
 					crop = { ref, dpr: facts.dpr ?? dpr }
 				}
 			}
@@ -610,6 +618,13 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 		// uid 标记只服务于录制期的候选校验：所有步骤都建好之后再统一清掉
 		await clearUids(page).catch(() => {})
 
+		/* ---------- 步骤后处理 ---------- */
+		// 1) 同一目标连续 input 合并成最后一次（人工输入停顿 >500ms 会被拆成多步）
+		// 2) 可编辑元素上的 click 紧跟同目标 input/select 时，丢掉 click（input 自带聚焦）
+		const refinedSteps = refineSteps(steps)
+		steps.length = 0
+		steps.push(...refinedSteps)
+
 		/* ---------- 落盘 ---------- */
 
 		if (driveError) {
@@ -727,4 +742,47 @@ function titleFromUrl(rawUrl: string): string {
 	} catch {
 		return rawUrl
 	}
+}
+
+/** 录制后步骤清理：合并碎片化的输入、去掉可编辑元素上多余的 click */
+function refineSteps(steps: Step[]): Step[] {
+	const keyOf = (step: Step): string | undefined => {
+		if (!('target' in step) || !step.target) return undefined
+		const ref = step.target as ElementRef
+		return `${ref.fingerprint.stableHash}|${JSON.stringify(ref.frame?.path ?? [])}`
+	}
+	const isEditable = (step: Step): boolean => {
+		if (!('target' in step) || !step.target) return false
+		const ref = step.target as ElementRef
+		const tag = ref.observed.tag
+		return (
+			tag === 'input' ||
+			tag === 'textarea' ||
+			tag === 'select' ||
+			ref.observed.attributes?.['contenteditable'] === 'true'
+		)
+	}
+	const out: Step[] = []
+	for (const step of steps) {
+		const prev = out[out.length - 1]
+		const prevKey = prev ? keyOf(prev) : undefined
+		const curKey = keyOf(step)
+		// 连续 input（同目标）→ 保留最后一次，沿用第一条的 id（时间线稳定）
+		if (step.kind === 'input' && prev?.kind === 'input' && prevKey && prevKey === curKey) {
+			out[out.length - 1] = { ...step, id: prev.id }
+			continue
+		}
+		// 可编辑元素上的 click 紧跟同目标 input/select → 丢掉 click
+		if (
+			prev?.kind === 'click' &&
+			isEditable(prev) &&
+			prevKey === curKey &&
+			(step.kind === 'input' || step.kind === 'select')
+		) {
+			out[out.length - 1] = step
+			continue
+		}
+		out.push(step)
+	}
+	return out
 }

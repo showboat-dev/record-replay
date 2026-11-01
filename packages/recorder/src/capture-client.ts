@@ -117,10 +117,14 @@ export async function locateByUid(frame: Frame, uid: string): Promise<Locator | 
 }
 
 /** 直接在页面里读一个元素的最新事实（位置可能已经变了，录完要刷新） */
-export async function readFactsFromHandle(handle: ElementHandle): Promise<RawElementFacts | undefined> {
+export async function readFactsFromHandle(
+	handle: ElementHandle,
+): Promise<RawElementFacts | undefined> {
 	try {
 		const facts = await handle.evaluate(
-			(el) => ((el.ownerDocument?.defaultView as any)?.__rrFacts?.(el) as RawElementFacts | undefined) ?? null,
+			(el) =>
+				((el.ownerDocument?.defaultView as any)?.__rrFacts?.(el) as RawElementFacts | undefined) ??
+				null,
 		)
 		return facts ?? undefined
 	} catch {
@@ -128,7 +132,10 @@ export async function readFactsFromHandle(handle: ElementHandle): Promise<RawEle
 	}
 }
 
-export async function readFactsByUid(frame: Frame, uid: string): Promise<RawElementFacts | undefined> {
+export async function readFactsByUid(
+	frame: Frame,
+	uid: string,
+): Promise<RawElementFacts | undefined> {
 	const locator = await locateByUid(frame, uid)
 	if (!locator) return undefined
 	const handle = await locator.elementHandle({ timeout: 1000 }).catch(() => null)
@@ -181,9 +188,11 @@ export async function describeElement(locator: Locator): Promise<ElementDescript
 }
 
 function unescapeYamlString(value: string): string {
-	return value.replace(/\\(["\\])/g, '$1').replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) =>
-		String.fromCharCode(Number.parseInt(hex, 16)),
-	)
+	return value
+		.replace(/\\(["\\])/g, '$1')
+		.replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) =>
+			String.fromCharCode(Number.parseInt(hex, 16)),
+		)
 }
 
 /* ------------------------------------------------------------------ */
@@ -223,7 +232,11 @@ export type ValidationResult = 'ok' | 'ambiguous' | 'missing'
  * 第 3 步是关键：PW 的 `getByRole('button', {name:'提交'})` 唯一命中时也可能指向另一个
  * 长得一样的按钮，只判 count 会把「录错元素」写进 IR。
  */
-export async function validateCandidate(frame: Frame, candidate: Candidate, uid: string): Promise<ValidationResult> {
+export async function validateCandidate(
+	frame: Frame,
+	candidate: Candidate,
+	uid: string,
+): Promise<ValidationResult> {
 	const locator = buildLocator(frame, candidate)
 	let count = 0
 	try {
@@ -285,14 +298,40 @@ export function normalizeEmitPayload(payload: unknown): RawEvent | undefined {
 		trusted: raw.trusted !== false,
 	}
 	const facts = raw.facts
-	if (facts && typeof facts === 'object' && typeof facts.tag === 'string') event.facts = facts as RawElementFacts
+	if (facts && typeof facts === 'object' && typeof facts.tag === 'string')
+		event.facts = facts as RawElementFacts
 	return event
 }
 
-/** 抓某个元素的截图（用于 crop）；失败返回 undefined（元素可能被遮住/已销毁） */
-export async function screenshotElement(locator: Locator, path: string): Promise<boolean> {
+/**
+ * 抓元素区域截图（用于 crop）。
+ *
+ * **不要用 `locator.screenshot()`**：它会 scrollIntoView，导致录制时页面自己滚动 ——
+ * 用户看到的就是"每输入一次页面闪一下"，而且滚动事件会被录制器当成用户操作录进 flow。
+ * 这里用 `page.screenshot({ clip })`：不滚动、不改变焦点，clip 用文档坐标（视口 rect + 滚动偏移）。
+ * 只支持主 frame（iframe 内的元素跳过 crop，回放不受影响）。
+ */
+export async function screenshotRegion(
+	page: Page,
+	frame: Frame,
+	rect: { x: number; y: number; width: number; height: number },
+	scroll: { x: number; y: number },
+	path: string,
+): Promise<boolean> {
+	if (frame !== page.mainFrame()) return false
+	if (rect.width < 1 || rect.height < 1) return false
 	try {
-		await locator.screenshot({ path, timeout: 3000, animations: 'disabled' })
+		await page.screenshot({
+			path,
+			animations: 'disabled',
+			timeout: 3000,
+			clip: {
+				x: Math.max(0, Math.round(rect.x + scroll.x)),
+				y: Math.max(0, Math.round(rect.y + scroll.y)),
+				width: Math.max(1, Math.round(rect.width)),
+				height: Math.max(1, Math.round(rect.height)),
+			},
+		})
 		return true
 	} catch {
 		return false

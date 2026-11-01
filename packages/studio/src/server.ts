@@ -351,11 +351,21 @@ async function startPlayback(body: Record<string, unknown>): Promise<Record<stri
 
 	void (async () => {
 		try {
+			// 业务人员默认看得到浏览器：headed 时放慢节奏 + 高亮目标，看起来像"有人在帮你填"
+			const headed = body.headed === undefined ? true : Boolean(body.headed)
 			const results: RunResult[] = await playRuns({
 				flow,
 				runs,
-				headless: body.headed ? false : true,
+				headless: !headed,
 				...(variables ? { variables } : {}),
+				...(headed
+					? {
+							stepDelayMs: 350,
+							highlightSteps: true,
+							keepOpenMs: 1500,
+							keepOpenOnFailureMs: 20_000,
+						}
+					: {}),
 			})
 			job.runs = results.map((r) => ({
 				ok: r.ok,

@@ -138,6 +138,35 @@ async function readMutationCount(page: Page): Promise<number> {
 		.catch(() => 0)
 }
 
+/**
+ * 给目标元素加一圈临时高亮，让业务人员看得见"现在要操作哪里"。
+ * 用 elementHandle.evaluate，iframe 内元素也生效（在所属文档里加 outline）。
+ */
+async function flashLocator(locator: Locator, delayMs: number): Promise<void> {
+	const handle = await locator.elementHandle({ timeout: 1500 }).catch(() => null)
+	if (!handle) {
+		await sleep(delayMs)
+		return
+	}
+	const paint = (color: string | null) =>
+		handle
+			.evaluate((el: Element, c: string | null) => {
+				const style = (el as HTMLElement).style
+				if (c) {
+					style.outline = `3px solid ${c}`
+					style.outlineOffset = '2px'
+				} else {
+					style.outline = ''
+					style.outlineOffset = ''
+				}
+			}, color)
+			.catch(() => undefined)
+	await paint('#ff6b00')
+	await sleep(delayMs)
+	await paint(null)
+	await handle.dispose().catch(() => undefined)
+}
+
 export async function executeRun(
 	opts: PlayOptions,
 	runId: string = makeId('run'),
@@ -272,7 +301,7 @@ export async function executeRun(
 
 		const resolveTarget = async (
 			target: ElementRef,
-			opts2: { requireVisible?: boolean; allowAi?: boolean } = {},
+			opts2: { requireVisible?: boolean; allowAi?: boolean; flash?: boolean } = {},
 		): Promise<ResolveResult> => {
 			// spike A / lead 约束 4：closed shadow 目标不要走 AI —— aria snapshot 里根本没有它，
 			// 只可能白白消耗调用额度；直接按 host + position 降级。
@@ -292,10 +321,23 @@ export async function executeRun(
 					...(opts.baseUrl !== undefined ? { baseUrl: opts.baseUrl } : {}),
 				},
 			})
+			// 给业务人员看：动作前高亮目标 + 停顿（只在非 headless 时由调用方开启）
+			if (opts2.flash) {
+				await flashLocator(result.locator, Math.max(0, opts.stepDelayMs ?? 350))
+			} else if (!(opts.headless ?? true) && (opts.stepDelayMs ?? 0) > 0) {
+				await sleep(opts.stepDelayMs ?? 0)
+			}
 			return result
 		}
 
-		const actionDeps: ActionDeps = { page, timeoutMs, log: pushLog, resolveTarget, vars }
+		const actionDeps: ActionDeps = {
+			page,
+			timeoutMs,
+			log: pushLog,
+			resolveTarget: (target, o) =>
+				resolveTarget(target, { ...o, flash: opts.highlightSteps === true }),
+			vars,
+		}
 		const verifyDeps: VerifyDeps = {
 			page,
 			timeoutMs,
@@ -540,6 +582,19 @@ export async function executeRun(
 			opts.onStep?.(stepResult)
 		}
 	} finally {
+		// 给业务人员留时间看结果：headed 模式下成功停留 keepOpenMs，失败停留更久
+		if (!(opts.headless ?? true)) {
+			const hasFailure = steps.some((s) => s.status === 'fail')
+			const keep = hasFailure ? (opts.keepOpenOnFailureMs ?? 15_000) : (opts.keepOpenMs ?? 1200)
+			if (keep > 0) {
+				pushLog(
+					hasFailure
+						? `有步骤失败，浏览器保持打开 ${Math.round(keep / 1000)}s 便于查看`
+						: `回放完成，浏览器保持打开 ${Math.round(keep / 1000)}s`,
+				)
+				await sleep(keep)
+			}
+		}
 		await browser.close().catch(() => {
 			/* 浏览器可能已被外部关闭 */
 		})

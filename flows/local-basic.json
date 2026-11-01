@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxll34m_aoltcj",
+  "id": "flow_mvxopo7d_l48tvu",
   "title": "/basic",
   "version": 1,
-  "createdAt": "2026-11-01T08:58:23.275Z",
+  "createdAt": "2026-11-01T10:25:56.088Z",
   "meta": {
     "env": {
       "startUrl": "http://127.0.0.1:5173/basic",
@@ -49,7 +49,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793523502936
+          "recordedAt": 1793528755849
         },
         "candidates": [
           {
@@ -174,7 +174,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793523503063
+          "recordedAt": 1793528755942
         },
         "candidates": [
           {
@@ -299,7 +299,7 @@
               "height": 900
             },
             "dpr": 1,
-            "recordedAt": 1793523503264
+            "recordedAt": 1793528756076
           },
           "candidates": [
             {
@@ -385,7 +385,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793523503179
+          "recordedAt": 1793528756025
         },
         "candidates": [
           {

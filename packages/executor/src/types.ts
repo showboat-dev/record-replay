@@ -92,6 +92,17 @@ export interface PlayOptions {
 	screenshotMode?: ScreenshotMode
 	/** 追加：出现 JS 对话框时的策略，默认 dismiss（自动关闭并记录） */
 	dialogPolicy?: DialogPolicy
+	/**
+	 * 追加：每步动作前的停顿（ms）。非 headless（给业务人员看）时建议 300–600，
+	 * 让"自动填表"看起来像有人在操作，而不是页面一闪而过。
+	 */
+	stepDelayMs?: number
+	/** 追加：动作前高亮目标元素（非 headless 时建议开），默认 false */
+	highlightSteps?: boolean
+	/** 追加：非 headless 回放成功结束后，浏览器保持打开的时长（ms），默认 1200 */
+	keepOpenMs?: number
+	/** 追加：非 headless 回放失败后，浏览器保持打开的时长（ms），默认 15000 */
+	keepOpenOnFailureMs?: number
 }
 
 /** RunResult 落盘时的扩展结构（result.json） */
