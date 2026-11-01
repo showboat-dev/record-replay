@@ -9,3 +9,7 @@ flows/studio-*.json
 
 profiles/
 flows/.rerecord/
+
+# 本地测试脚手架（测试站 + 端到端测试），不属于产品代码，不入库
+fixtures/
+e2e/

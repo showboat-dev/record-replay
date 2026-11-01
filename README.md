@@ -28,33 +28,35 @@ packages/
 ├─ ai/         AI 兜底（OpenAI 兼容，默认关闭）
 ├─ harness/    回归集 runner + report
 └─ cli/        rr record/play/inspect/harness
-fixtures/site/ 自建难场景测试站（iframe/shadow/canvas/虚拟列表/受控组件…）
 flows/         录制产物（IR）
 artifacts/     运行产物（截图/快照/日志，gitignore）
-docs/          架构契约（architecture.md）、spike 结论
+docs/          架构契约（architecture.md）、spike 结论、analysis/ 研究归档
 ```
+
+> 仓库只放产品代码。`fixtures/`（自建测试站）与 `e2e/`（端到端测试）是**本地测试脚手架**，
+> 已在 `.gitignore` 中忽略、不随仓库分发（见文末「本地测试脚手架」）。
 
 ## 关键文档
 
 - [docs/architecture.md](docs/architecture.md) —— 各包接口契约（并行开发以它为准）
 - [docs/spikes.md](docs/spikes.md) —— closed shadow / iframe ref 的实测结论
-- [../docs/产品设计-录制回放-v0.1.md](../docs/产品设计-录制回放-v0.1.md) —— 产品设计
-- [../refs/README.md](../refs/README.md) —— 14 个参考仓库索引
+- [docs/analysis/产品设计-录制回放-v0.1.md](docs/analysis/产品设计-录制回放-v0.1.md) —— v0.1 产品设计草案（历史归档）
+- [docs/analysis/README.md](docs/analysis/README.md) —— 参考项目分析归档索引（`refs/` 克隆不随仓库分发）
 
 ## 状态（M0 + M1 已完成）
 
 | 模块                                          | 状态 | 证据                                                                                 |
 | --------------------------------------------- | ---- | ------------------------------------------------------------------------------------ |
 | IR（schema + 契约）                           | ✅   | 20 单测（含 closed shadow/canvas 坐标契约）                                          |
-| fixture 测试站（11 难场景路由 + 双端口跨域）  | ✅   | 27 条 curl + 81 条 Playwright 冒烟                                                   |
+| 自建测试站（本地 `fixtures/`，未入库）        | ✅   | 18 个难场景路由（iframe/shadow/登录/上传下载…）+ 双端口跨域                          |
 | Spike A/B（closed shadow / iframe ref）       | ✅   | `docs/spikes.md`（847 行，实测结论）                                                 |
 | recorder                                      | ✅   | capture.js + 合流 + Node 侧候选校验 + closed shadow host/offset + iframe 链；67 单测 |
 | resolver（L1 + L2）                           | ✅   | 34 单测；L2 抹掉语义候选后 4/4 命中；歧义 15% 拒绝猜测                               |
 | executor                                      | ✅   | 协议 13 种 step；失败必产 artifact；71 单测 + 14 个真实浏览器冒烟                    |
 | ai（默认关闭）                                | ✅   | 46 单测（mock fetch）；脱敏/护栏/缓存/ref 生命周期                                   |
 | harness + CLI                                 | ✅   | 站点清单/统计/HTML 报告；`rr harness` 6 站 18/18 通过                                |
-| e2e（录→放 3 次）                             | ✅   | `e2e/record-play.test.ts` 通过                                                       |
-| v0.2 新能力（标签页/对话框/下载/组合键/上传） | ✅   | `e2e/new-capabilities.test.ts` 6/6；5 条 smoke flow 回放通过                         |
+| 端到端验证（本地 `e2e/`，未入库）             | ✅   | 5 套 14 条：录制→回放 / 新能力 / 登录态 / 参数化 / CSV 批量                          |
+| v0.2 新能力（标签页/对话框/下载/组合键/上传） | ✅   | 端到端 6/6；5 条 smoke flow 回放通过                                                 |
 
 ### 当前基线（`pnpm rr harness --runs 3 --sites local`）
 
@@ -109,7 +111,7 @@ P50 93ms / P95 354ms
 - 时间线每步「重录」→ 浏览器打开起始页（自动带登录态）→ 用户手动走到目标位置并操作 → 停止 → 从本次录到的动作里选一个 → 替换第 N 步（保留原 stepId，`version+1`，写 `.bak`）。
 - 这是"方案 A"：不自动回放前缀，避免重复提交等副作用；代价是候选里含导航过程的动作，由用户选择。
 
-契约：`docs/profiles-rerecord.md`；e2e：`e2e/profile-storage.test.ts`（3/3）；Studio API 测试：`packages/studio/src/profiles.api.test.ts`（15 条）。
+契约：`docs/profiles-rerecord.md`；端到端 3/3（本地 `e2e/`）；Studio API 测试：`packages/studio/src/profiles.api.test.ts`（15 条）。
 
 ## 参数化建议（Phase 1：规则召回 + 一键采纳）
 
@@ -122,7 +124,7 @@ npx tsx packages/cli/src/main.ts suggest flows/local-basic.json   # CLI 只读�
 - **规则召回**（`@rr/suggest`，117 单测）：输入类型/值格式/中英文字段词表/同值重复打分；搜索框、泛化 textarea 负向降权；password/多选/空值直接排除并给中文原因；置信度 high/medium/weak（默认只展示 high+medium）
 - **Studio 交互**：步骤行 `💡 建议参数化` + 接受/修改/忽略；底部批量条「全部接受」；接受弹窗可改变量名/类型、勾选"同值一起替换"；变量区支持重命名；忽略记在 localStorage（不写 IR）
 - **IR 变更**：接受后 `value` 变 `{{变量}}` + `variables[]` 增加定义，`version+1` 且写 `.bak`
-- **CLI/e2e**：`rr suggest` 只读；`e2e/param-suggest.test.ts` 覆盖"录制→建议→接受→回放（带变量通过/缺变量 VARIABLE_MISSING）"
+- **CLI/端到端**：`rr suggest` 只读；本地端到端覆盖"录制→建议→接受→回放（带变量通过/缺变量 VARIABLE_MISSING）"
 
 > Phase 2（AI 裁决）接口已预留：`@rr/suggest` 的 `SuggestionAdjudicator`，只对 medium/weak 候选调用，
 > 输入只包含字段语义 + **脱敏后的值格式**（不传原文/DOM/截图），等内网模型端点到位再接。
@@ -166,3 +168,15 @@ npx tsx scripts/public-corpus.ts run --runs 3
 2. 20 条 flow × 10 runs，目标 ≥85%；失败分类统计与归因
 3. 加 L2 增强（属性交集）与 expect（textChange/区域 hash）——按数据决定
 4. `stableHash` 上移到 `@rr/schema`，去掉跨包复刻
+
+## 本地测试脚手架（未纳入仓库）
+
+为了让仓库只保留产品代码，以下两个目录**不提交**（`.gitignore`）：
+
+| 目录        | 内容                                                                  | 怎么跑                                  |
+| ----------- | --------------------------------------------------------------------- | --------------------------------------- |
+| `fixtures/` | 自建测试站（18 个难场景路由 + 双端口跨域 + 登录/上传下载页）          | `pnpm site`（:5173），或由 e2e 自动拉起 |
+| `e2e/`      | 端到端测试：录制→回放、新能力、登录态、参数化、CSV 批量（5 套 14 条） | `pnpm e2e`                              |
+
+> 新克隆仓库后这两个目录不存在，`pnpm e2e` / `pnpm site` 会失败——这是预期：
+> 产品本身不依赖它们（`pnpm test`、`pnpm typecheck`、`pnpm studio` 均可独立运行）。
