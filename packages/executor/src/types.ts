@@ -98,6 +98,16 @@ export interface PlayOptions {
 	 */
 	stepDelayMs?: number
 	/**
+	 * 追加：读取登录态（Playwright storageState JSON 路径）。
+	 * 文件不存在 / 非法 → 只告警，按"未登录"继续回放（不会让流程跑不起来）。
+	 */
+	storageStatePath?: string
+	/**
+	 * 追加：每个 run 结束后把当前登录态**原子写回**该路径（无论成败，尽力而为，失败只告警）。
+	 * Studio 负责按 origin 找路径并落文件；core 包只接收路径。
+	 */
+	saveStorageStatePath?: string
+	/**
 	 * 追加：解析元素时最多等它出现多久（ms，透传 resolver.elementWaitMs，默认 5000）。
 	 * 慢 SPA 调大、追求"失败快速返回"调小（冒烟里用 800 让不存在元素快速失败）。
 	 */

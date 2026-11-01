@@ -72,6 +72,26 @@
 | BROWSER_CRASH     | 浏览器异常退出                                   |
 | VARIABLE_MISSING  | 缺少运行参数（变量未填写）                       |
 
+### 登录态 profiles（v0.4 新增，契约详见 docs/profiles-rerecord.md §A.3）
+
+- `GET /api/profiles` → `{ profiles: ProfileMeta[] }`（只返回计数，不返回 cookie 原文）
+- `POST /api/profiles/login/start` body `{ url }` → `{ sessionId }`（打开可见浏览器，用户自己登录）
+- `GET /api/profiles/login/status?sessionId=` → `{ running, elapsedMs? }`
+- `POST /api/profiles/login/stop` body `{ sessionId }` → `{ ok, profile }`（保存 storageState）
+- `POST /api/profiles/login/cancel` body `{ sessionId }` → `{ ok: true }`
+- `DELETE /api/profiles/:originKey` → `{ ok: true }` / 404
+
+录制与回放会自动按 `flow.meta.env.startUrl` 的 origin 读写该 profile；录制停止时自动刷新保存。
+
+### 单步重录（v0.4 新增，契约详见 docs/profiles-rerecord.md §B.2）
+
+- `POST /api/flows/:file/steps/:stepId/rerecord/start` → `{ sessionId, startUrl, target }`
+- `POST /api/flows/:file/steps/:stepId/rerecord/stop` body `{ sessionId }` → `{ candidates, tempFile }`
+- `POST /api/flows/:file/steps/:stepId/rerecord/cancel` body `{ sessionId }` → `{ ok: true }`
+- `POST /api/flows/:file/steps/:stepId/replace` body `{ tempFile, tempStepId }` → `{ ok, flow, steps, suggestions }`
+
+替换保留原 stepId、`version+1`、写 `.bak`；临时录制文件在 `flows/.rerecord/`（gitignore），替换成功或取消后删除。
+
 ### 参数化建议（v0.3 新增，契约详见 docs/parameterization.md）
 
 - `GET /api/flows/:file/suggestions?includeWeak=0` → `FlowSuggestions`

@@ -3,7 +3,8 @@
  *
  * 时序（每一步都有明确理由）：
  *
- *   launch chromium → newContext(viewport) → exposeBinding('__rrEmit') + addInitScript(capture.js)
+ *   loadProfile(storageStatePath)                       ← 登录态（读失败=没登录态，不报错）
+ *   launch chromium → newContext(viewport, storageState) → exposeBinding('__rrEmit') + addInitScript(capture.js)
  *   → goto(startUrl) → 抓初始签名 sig0
  *   → 事件进 buffer
  *   → 每 100ms tick：距最后一个事件 ≥ 500ms 就把 buffer 拿去合流（coalesceEvents）
@@ -31,7 +32,7 @@ import type {
 	Variable,
 } from '@rr/schema'
 import { chromium } from 'playwright'
-import type { CDPSession, Frame, Locator, Page } from 'playwright'
+import type { BrowserContext, CDPSession, Frame, Locator, Page } from 'playwright'
 
 import {
 	clearUids,
@@ -55,6 +56,7 @@ const NAME_KEEPALIVE_SOURCE = 'globalThis.__name = globalThis.__name || ((fn) =>
 import { coalesceEvents } from './coalesce.js'
 import { buildElementRef, deriveCandidates } from './element.js'
 import { appearedNodes, inferExpect, pickExpectTarget, urlPattern } from './expect.js'
+import { describeStorageState, loadProfile, saveProfile, type ProfileShape, type StorageState } from './profile.js'
 import {
 	downloadFilenamePattern,
 	findDownloadFor,
@@ -163,9 +165,68 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 	/** 页面签名时间线：多标签页各自打点，按 pageIndex 过滤使用 */
 	const samples: Array<{ ts: number; pageIndex: number; sig: PageSignature }> = []
 
+	/* ---------------- 登录态（storageState profile） ---------------- */
+
+	const profile = await loadProfile(opts.storageStatePath)
+	if (profile.status === 'missing' || profile.status === 'invalid') {
+		// 读失败不是错误：这次就当没登录态录，录完照常可以用 saveStorageStatePath 存一份新的
+		warnings.push(profile.message ?? '登录态读取失败，按未登录状态录制')
+	}
+	if (profile.status === 'loaded') warnings.push(`已加载登录态：${describeStorageState(profile.state)}`)
+	const profileShape: ProfileShape = profile.shape ?? 'raw'
+	const profileOrigin = profile.origin
+
 	const browser = await chromium.launch({ headless })
+	/**
+	 * context 的「外层引用」：try/finally 里要做「兜底保存登录态」
+	 * （drive 抛错 / goto 失败 / 任何异常路径都要存一次）。
+	 * 用单独变量而不是把 const context 提出来，是为了不破坏 try 内部已有的类型收窄。
+	 */
+	let contextRef: BrowserContext | undefined
+	let savedProfile = false
+	/**
+	 * 把当前登录态写回 saveStorageStatePath（幂等，只写一次）。
+	 * 失败只告警：profile 是增强项，不该影响 flow 落盘。
+	 */
+	const persistStorageState = async (): Promise<void> => {
+		const activeContext = contextRef
+		if (savedProfile || !opts.saveStorageStatePath || !activeContext) return
+		savedProfile = true
+		let state: StorageState
+		try {
+			state = await activeContext.storageState()
+		} catch (err) {
+			warnings.push(`保存登录态失败（读取 storageState）：${(err as Error).message}`)
+			return
+		}
+		const result = await saveProfile(opts.saveStorageStatePath, state, {
+			shape: profileShape,
+			origin: profileOrigin,
+		})
+		if (result.ok) warnings.push(`已保存登录态：${describeStorageState(state)} → ${result.path}`)
+		else warnings.push(`保存登录态失败（${opts.saveStorageStatePath}）：${result.error}`)
+	}
+
 	try {
-		const context = await browser.newContext({ viewport, deviceScaleFactor: 1 })
+		const baseContextOptions = { viewport, deviceScaleFactor: 1 }
+		let context: BrowserContext
+		try {
+			context = await browser.newContext({
+				...baseContextOptions,
+				// 没有登录态时不要传 storageState（显式空对象会被 Playwright 判为非法）
+				...(profile.state ? { storageState: profile.state } : {}),
+			})
+		} catch (err) {
+			// profile 只是「省一次登录」的增强，不能因为它让整场录制开不起来：
+			// 形状合法但内容被 Playwright 判非法（如过期的 sameSite 枚举、坏 domain）时，
+			// 丢掉登录态重试一次，并在告警里说清楚。
+			if (!profile.state) throw err
+			warnings.push(
+				`登录态无法被浏览器接受，本次按未登录录制：${(err as Error).message.split('\n')[0]}`,
+			)
+			context = await browser.newContext(baseContextOptions)
+		}
+		contextRef = context
 		// keepNames 垫片：页面内采集/校验函数会经 page.evaluate 序列化，esbuild 注入的 __name 在页面里不存在
 		await context.addInitScript({ content: NAME_KEEPALIVE_SOURCE })
 		await installCapture(context, (sourcePage, frame, payload) => {
@@ -917,6 +978,11 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 		// id 连续化：中途可能有步骤被丢弃（去噪/detached），保证 s1..sN 连续好读
 		steps.push(...refinedSteps.map((step, index) => ({ ...step, id: `s${index + 1}` }) as Step))
 
+		/* ---------- 保存登录态（浏览器关闭前；drive 抛错也要存） ---------- */
+
+		// 放在「落盘」之前：即使后面 flow 写盘失败，用户的登录态也已经存下来了
+		await persistStorageState()
+
 		/* ---------- 落盘 ---------- */
 
 		if (driveError) {
@@ -978,6 +1044,9 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 		await saveFlow(flow, opts.outPath)
 		return { flow, artifactsDir, rawPath }
 	} finally {
+		// 兜底：任何异常路径（drive 抛错、goto 失败、保存 flow 失败）都尝试保存一次登录态。
+		// persistStorageState 幂等，正常路径已经存过就不会重复写。
+		await persistStorageState()
 		await browser.close().catch(() => {})
 	}
 }

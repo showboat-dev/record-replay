@@ -131,6 +131,11 @@ const state = {
 	suggestionsError: '',
 	ignoredSuggestions: new Set(),
 	showIgnoredSuggestions: false,
+	profiles: [], // ProfileMeta[]
+	profilesPhase: 'idle', // idle | loading | ready | unsupported | error
+	profilesError: '',
+	login: null, // { sessionId, url, startedAt, elapsedMs, busy }
+	rerecord: null, // { file, stepId, stepNo, title, sessionId, startUrl, phase }
 }
 
 const dom = {}
@@ -317,14 +322,46 @@ function renderBanner() {
 		return
 	}
 	const type = banner.type === 'warn' || banner.type === 'info' ? banner.type : 'error'
+	const busy = Boolean(banner.busy)
+	const actions = []
+	if (Array.isArray(banner.actions)) {
+		for (const item of banner.actions) {
+			if (!item || !item.action || !item.label) continue
+			const variant = item.variant === 'primary' ? 'btn-primary' : 'btn-ghost'
+			actions.push(
+				`<button type="button" class="btn btn-small ${variant}" data-action="${esc(item.action)}" ${busy ? 'disabled' : ''}>${esc(item.label)}</button>`
+			)
+		}
+	} else if (banner.actionLabel) {
+		actions.push(
+			`<button type="button" class="btn btn-small btn-ghost" data-action="banner-action" ${busy ? 'disabled' : ''}>${esc(banner.actionLabel)}</button>`
+		)
+	}
+	const timer = banner.timer
+		? `<span class="banner-timer" id="banner-timer">${esc(banner.timerText || '')}</span>`
+		: ''
+	const dismissible = banner.dismissible !== false
 	setHtml(
 		host,
 		`<div class="banner banner-${type}" role="alert">
 			<span class="banner-msg">${esc(banner.message)}</span>
-			${banner.actionLabel ? `<button type="button" class="btn btn-small btn-ghost" data-action="banner-action">${esc(banner.actionLabel)}</button>` : ''}
-			<button type="button" class="btn-icon" data-action="banner-close" aria-label="关闭提示">✕</button>
+			${timer}
+			${actions.length ? `<span class="banner-actions">${actions.join('')}</span>` : ''}
+			${dismissible ? '<button type="button" class="btn-icon" data-action="banner-close" aria-label="关闭提示">✕</button>' : ''}
 		</div>`
 	)
+}
+
+function setBannerBusy(busy) {
+	if (!state.banner) return
+	state.banner.busy = Boolean(busy)
+	renderBanner()
+}
+
+/** 只改 banner 里的计时文案，避免每 2 秒重排整个提示条 */
+function updateBannerTimer(text) {
+	const node = $('banner-timer')
+	if (node) node.textContent = String(text || '')
 }
 
 function toast(message, type) {
@@ -878,6 +915,517 @@ async function renameVariable(fromName) {
 	void loadFlows({ silent: true })
 }
 
+/* --------------------------- 登录态（profiles） -------------------------- */
+
+let loginPollTimer = null
+
+function flowStartUrl() {
+	const flow = state.detail && state.detail.flow
+	const url = flow && flow.meta && flow.meta.env && flow.meta.env.startUrl
+	return typeof url === 'string' ? url : ''
+}
+
+function originOfUrl(raw) {
+	if (typeof raw !== 'string' || !raw) return ''
+	try {
+		return new URL(raw).origin
+	} catch {
+		return ''
+	}
+}
+
+function flowOrigin() {
+	return originOfUrl(flowStartUrl())
+}
+
+function profileForCurrentFlow() {
+	const origin = flowOrigin()
+	if (!origin) return null
+	const list = Array.isArray(state.profiles) ? state.profiles : []
+	return list.find((item) => item && item.origin === origin) || null
+}
+
+function formatTimeAgo(iso) {
+	if (!iso) return ''
+	const time = new Date(iso).getTime()
+	if (!Number.isFinite(time)) return ''
+	const diff = Date.now() - time
+	if (diff < 0) return '刚刚'
+	const minute = 60_000
+	if (diff < minute) return '刚刚'
+	if (diff < 60 * minute) return `${Math.max(1, Math.round(diff / minute))} 分钟前`
+	if (diff < 24 * 60 * minute) return `${Math.round(diff / (60 * minute))} 小时前`
+	if (diff < 30 * 24 * 60 * minute) return `${Math.round(diff / (24 * 60 * minute))} 天前`
+	return fmtDate(iso)
+}
+
+function isRunActive() {
+	return Boolean(state.run && (state.run.status === 'starting' || state.run.status === 'running'))
+}
+
+/** 登录 / 单步重录这类"交互式会话"在进行中时，禁止并发发起其它长操作 */
+function hasActiveSession() {
+	return Boolean(state.login) || Boolean(state.rerecord)
+}
+
+function canManageProfile() {
+	return Boolean(state.detail) && !state.recording && !isRunActive() && !state.rerecord
+}
+
+async function loadProfiles(options) {
+	const opts = options || {}
+	if (!opts.silent) {
+		state.profilesPhase = 'loading'
+		renderDetailHeader()
+	}
+	try {
+		const data = await api('/api/profiles')
+		state.profiles = Array.isArray(data && data.profiles)
+			? data.profiles.filter((item) => item && item.origin)
+			: []
+		state.profilesPhase = 'ready'
+		state.profilesError = ''
+	} catch (err) {
+		// 契约 A.3：接口 404/失败时降级为不显示登录态，不阻塞主流程
+		state.profiles = []
+		state.profilesPhase = err && err.status === 404 ? 'unsupported' : 'error'
+		state.profilesError = err && err.message ? err.message : '读取登录态失败'
+	}
+	renderDetailHeader()
+}
+
+function ensureProfiles() {
+	if (state.profilesPhase === 'idle' || state.profilesPhase === 'error') void loadProfiles({ silent: true })
+}
+
+/** 某个站点 origin 的登录态 chip + 「更新登录态」「清除」按钮（接口不可用时不显示） */
+function loginStateHtmlFor(origin, options) {
+	const opts = options || {}
+	if (state.profilesPhase !== 'ready' || !origin) return ''
+	if (state.login) {
+		return '<span class="login-state"><span class="chip chip-login-pending">🔐 登录窗口中…</span></span>'
+	}
+	const list = Array.isArray(state.profiles) ? state.profiles : []
+	const profile = list.find((item) => item && item.origin === origin) || null
+	const busy =
+		opts.disabled !== undefined
+			? Boolean(opts.disabled)
+			: state.recording || isRunActive() || Boolean(state.rerecord)
+	const updateButton = `<button type="button" class="btn btn-tiny btn-ghost" data-action="login-update" ${busy ? 'disabled' : ''} title="打开浏览器登录一次，保存登录态供回放使用">更新登录态</button>`
+	if (profile) {
+		const ago = formatTimeAgo(profile.savedAt)
+		return `<span class="login-state">
+			<span class="chip chip-login-saved" title="站点 ${esc(profile.origin)}；保存于 ${esc(ago)}">🔐 已保存登录态（更新于 ${esc(ago)}）</span>
+			${updateButton}
+			<button type="button" class="btn btn-tiny btn-ghost" data-action="login-clear" ${busy ? 'disabled' : ''}>清除</button>
+		</span>`
+	}
+	return `<span class="login-state"><span class="chip chip-login-none">🔓 未保存登录态</span>${updateButton}</span>`
+}
+
+/** 流程头部（非录制态）用：按流程起始网址的 origin 匹配 */
+function loginStateHtml() {
+	if (!state.detail) return ''
+	return loginStateHtmlFor(flowOrigin())
+}
+
+async function startLoginUpdate() {
+	if (!state.detail) return
+	if (!canManageProfile()) {
+		toast('回放或重录进行中，等结束再更新登录态', 'info')
+		return
+	}
+	const origin = flowOrigin()
+	if (!origin) {
+		toast('这个流程没有记录起始网址，无法更新登录态', 'error')
+		return
+	}
+	state.login = { sessionId: '', url: flowStartUrl(), startedAt: Date.now(), elapsedMs: 0 }
+	setBanner({ type: 'info', message: '正在打开浏览器…', dismissible: false })
+	renderAll()
+
+	try {
+		const res = await api('/api/profiles/login/start', {
+			method: 'POST',
+			body: { url: flowStartUrl() },
+		})
+		if (!res || !res.sessionId) throw new Error('后端没有返回登录会话号')
+		state.login = {
+			sessionId: String(res.sessionId),
+			url: flowStartUrl(),
+			startedAt: Date.now(),
+			elapsedMs: 0,
+		}
+		setBanner({
+			type: 'info',
+			message: `请在新打开的浏览器里登录 ${origin}，完成后点「完成并保存」`,
+			actions: [
+				{ action: 'login-stop', label: '完成并保存', variant: 'primary' },
+				{ action: 'login-cancel', label: '取消' },
+			],
+			dismissible: false,
+			timer: true,
+			timerText: '已等待 00:00',
+		})
+		startLoginPoller()
+		toast('已打开登录窗口，请在新窗口里完成登录', 'success')
+	} catch (err) {
+		state.login = null
+		showErrorBanner(`打开登录窗口失败：${err.message}`, () => startLoginUpdate())
+	}
+	renderAll()
+}
+
+async function stopLogin() {
+	const login = state.login
+	if (!login || !login.sessionId || login.busy) return
+	login.busy = true
+	setBannerBusy(true)
+	try {
+		await api('/api/profiles/login/stop', {
+			method: 'POST',
+			body: { sessionId: login.sessionId },
+		})
+		state.login = null
+		stopLoginPoller()
+		setBanner(null)
+		await loadProfiles({ silent: true })
+		toast('登录态已保存，以后回放会自动带上', 'success')
+	} catch (err) {
+		login.busy = false
+		setBanner({
+			type: 'error',
+			message: `保存登录态失败：${err.message}`,
+			actions: [
+				{ action: 'login-stop', label: '重试保存', variant: 'primary' },
+				{ action: 'login-cancel', label: '取消' },
+			],
+			dismissible: false,
+			timer: true,
+			timerText: `已等待 ${fmtClock(login.elapsedMs)}`,
+		})
+	}
+	renderAll()
+}
+
+async function cancelLogin() {
+	const login = state.login
+	if (!login) return
+	if (login.sessionId) {
+		try {
+			await api('/api/profiles/login/cancel', {
+				method: 'POST',
+				body: { sessionId: login.sessionId },
+			})
+		} catch {
+			/* 浏览器可能已经被用户关掉，忽略 */
+		}
+	}
+	state.login = null
+	stopLoginPoller()
+	setBanner(null)
+	toast('已取消更新登录态', 'info')
+	renderAll()
+}
+
+async function clearLoginProfile() {
+	if (!canManageProfile()) {
+		toast('回放或重录进行中，等结束再操作', 'info')
+		return
+	}
+	const profile = profileForCurrentFlow()
+	if (!profile) return
+	const ok = await confirmDialog({
+		title: '清除登录态？',
+		body: `清除后，回放「${profile.origin}」时需要重新登录。登录态只保存在这台电脑上，不会影响其它站点。`,
+		confirmText: '清除登录态',
+	})
+	if (!ok) return
+	try {
+		await api(`/api/profiles/${encodeURIComponent(profile.originKey)}`, { method: 'DELETE' })
+		toast('登录态已清除', 'success')
+		await loadProfiles({ silent: true })
+	} catch (err) {
+		showErrorBanner(`清除登录态失败：${err.message}`)
+	}
+	renderAll()
+}
+
+function startLoginPoller() {
+	stopLoginPoller()
+	loginPollTimer = window.setInterval(() => void pollLoginStatus(), 2000)
+}
+
+function stopLoginPoller() {
+	if (loginPollTimer) {
+		window.clearInterval(loginPollTimer)
+		loginPollTimer = null
+	}
+}
+
+/** 轮询登录会话：更新已等待时间；后端超时自动关闭时收起 banner（老后端无此接口则静默） */
+async function pollLoginStatus() {
+	const login = state.login
+	if (!login || !login.sessionId) return
+	try {
+		const data = await api(
+			`/api/profiles/login/status?sessionId=${encodeURIComponent(login.sessionId)}`
+		)
+		if (!state.login || state.login.sessionId !== login.sessionId) return
+		state.login.elapsedMs = Number(data && data.elapsedMs) || state.login.elapsedMs
+		updateBannerTimer(`已等待 ${fmtClock(state.login.elapsedMs)}`)
+		if (data && data.running === false) {
+			state.login = null
+			stopLoginPoller()
+			setBanner(null)
+			toast('登录窗口已关闭，这次登录没有保存', 'info')
+			renderAll()
+		}
+	} catch {
+		/* 状态接口不可用：不打扰用户，手动保存仍然可用 */
+	}
+}
+
+/* ---------------------------- 单步重录 ---------------------------------- */
+
+function rerecordBusy() {
+	return state.recording || isRunActive() || Boolean(state.login) || Boolean(state.rerecord)
+}
+
+async function startRerecord(stepId) {
+	if (!state.detail || !state.selectedFile) return
+	if (rerecordBusy()) {
+		toast('录制、回放或其它重录进行中，等结束再操作', 'info')
+		return
+	}
+	const steps = Array.isArray(state.detail.steps) ? state.detail.steps : []
+	const index = steps.findIndex((item) => item && item.id === stepId)
+	const step = index >= 0 ? steps[index] : null
+	if (!step) {
+		toast('找不到这一步，刷新后再试', 'error')
+		return
+	}
+	if (step.kind === 'group') {
+		toast('分组步骤暂不支持单步重录', 'info')
+		return
+	}
+	const no = stepNumber(step, index, steps)
+	const ok = await confirmDialog({
+		title: `重录第 ${no} 步？`,
+		body: '会打开一个浏览器窗口，你手动走到这一步所在的页面，操作一遍；录制只在你本机进行，不会上传。录完点「停止并选择这一步」，再从候选动作里选一个替换。',
+		confirmText: '开始重录',
+		danger: false,
+	})
+	if (!ok) return
+
+	try {
+		const res = await api(
+			`/api/flows/${encodeURIComponent(state.selectedFile)}/steps/${encodeURIComponent(stepId)}/rerecord/start`,
+			{ method: 'POST' }
+		)
+		if (!res || !res.sessionId) throw new Error('后端没有返回重录会话号')
+		const target = res.target || {}
+		const targetIndex = Number(target.stepIndex)
+		state.rerecord = {
+			file: state.selectedFile,
+			stepId,
+			stepNo: Number.isFinite(targetIndex) ? targetIndex + 1 : no,
+			title: target.title || step.title || `第 ${no} 步`,
+			sessionId: String(res.sessionId),
+			startUrl: res.startUrl || '',
+			phase: 'recording',
+		}
+		setBanner({
+			type: 'info',
+			message: '正在录制备选动作…请在新窗口里操作到目标位置，然后点「停止并选择这一步」',
+			actions: [
+				{ action: 'rerecord-stop', label: '停止并选择', variant: 'primary' },
+				{ action: 'rerecord-cancel', label: '取消' },
+			],
+			dismissible: false,
+		})
+		toast('重录已开始，请在浏览器窗口里操作', 'success')
+	} catch (err) {
+		showErrorBanner(`开始重录失败：${err.message}`, () => startRerecord(stepId))
+	}
+	renderAll()
+}
+
+async function stopRerecord() {
+	const session = state.rerecord
+	if (!session || session.phase !== 'recording') return
+	session.phase = 'stopping'
+	setBannerBusy(true)
+	renderAll()
+
+	try {
+		const res = await api(
+			`/api/flows/${encodeURIComponent(session.file)}/steps/${encodeURIComponent(session.stepId)}/rerecord/stop`,
+			{ method: 'POST', body: { sessionId: session.sessionId } }
+		)
+		const candidates = res && Array.isArray(res.candidates) ? res.candidates : []
+		const tempFile = res && res.tempFile ? String(res.tempFile) : ''
+		setBanner(null)
+		session.phase = 'choosing'
+		renderAll()
+
+		if (!candidates.length || !tempFile) {
+			await noticeDialog({
+				title: '这次没有录到操作',
+				body: '浏览器已经关掉了，但这次没有录到可以替换的动作。请再点该步骤的「重录」，在新窗口里走到目标位置、做出要替换的那个操作，再点「停止并选择这一步」。',
+				confirmText: '知道了',
+			})
+			await cleanupRerecordSession(session)
+			return
+		}
+
+		const chosen = await rerecordCandidatesDialog({ session, candidates, tempFile })
+		if (!chosen) {
+			await cleanupRerecordSession(session)
+			return
+		}
+		state.rerecord = null
+		toast(`已替换第 ${session.stepNo} 步，建议跑一次自检`, 'success')
+		await applyFlowResult(chosen.res)
+		void loadFlows({ silent: true })
+	} catch (err) {
+		session.phase = 'recording'
+		setBanner({
+			type: 'error',
+			message: `停止重录失败：${err.message}`,
+			actions: [
+				{ action: 'rerecord-stop', label: '重试停止', variant: 'primary' },
+				{ action: 'rerecord-cancel', label: '取消重录' },
+			],
+			dismissible: false,
+		})
+	}
+	renderAll()
+}
+
+async function cancelRerecord() {
+	const session = state.rerecord
+	if (!session) return
+	await cleanupRerecordSession(session)
+	toast('已取消重录，临时录制文件已清理', 'info')
+}
+
+/** 关闭/放弃重录会话：尽力让后端关浏览器、删临时文件，失败不打扰用户 */
+async function cleanupRerecordSession(session) {
+	if (session && session.sessionId) {
+		try {
+			await api(
+				`/api/flows/${encodeURIComponent(session.file)}/steps/${encodeURIComponent(session.stepId)}/rerecord/cancel`,
+				{ method: 'POST', body: { sessionId: session.sessionId } }
+			)
+		} catch {
+			/* 会话可能已结束，忽略 */
+		}
+	}
+	state.rerecord = null
+	setBanner(null)
+	renderAll()
+}
+
+/** 通用"知道了"提示弹窗（候选为空等） */
+function noticeDialog(options) {
+	const cfg = options || {}
+	return new Promise((resolve) => {
+		const modal = createModal({
+			name: 'notice',
+			dialogClass: 'modal-prompt',
+			title: cfg.title || '提示',
+			bodyHtml: `<p class="dialog-lead">${esc(cfg.body || '')}</p>`,
+			actionsHtml: `<button type="button" class="btn btn-primary" data-dialog-action="ok">${esc(cfg.confirmText || '知道了')}</button>`,
+			onClose: () => resolve(true),
+		})
+		const okButton = modal.root.querySelector('[data-dialog-action="ok"]')
+		okButton.addEventListener('click', () => modal.close(true))
+		okButton.focus()
+	})
+}
+
+/** 候选动作单选弹窗：确认时直接 POST replace，失败在弹窗内联展示 */
+function rerecordCandidatesDialog(options) {
+	const cfg = options || {}
+	const session = cfg.session || {}
+	const candidates = Array.isArray(cfg.candidates) ? cfg.candidates : []
+	const maps = stepTitleMaps()
+	const originalStep = maps.byId.get(session.stepId)
+	const originalKind = originalStep ? originalStep.kind : ''
+	let preselected = candidates.findIndex((item) => item && item.kind === originalKind)
+	if (preselected < 0) preselected = 0
+
+	const itemsHtml = candidates
+		.map((item, index) => {
+			const no = index + 1
+			const kindText = KIND_TEXT[item.kind] || (item.kind ? String(item.kind) : '')
+			const description = item.description ? String(item.description) : ''
+			const expect = item.expect ? `校验：${humanizeExpect(item.expect)}` : ''
+			const thumb = assetUrl(item.screenshot)
+			const meta = [kindText, description, expect].filter(Boolean).join(' · ')
+			return `<label class="candidate-item">
+				<input type="radio" name="rerecord-candidate" value="${esc(item.id)}" ${index === preselected ? 'checked' : ''} />
+				<span class="candidate-no">${no}</span>
+				<span class="candidate-main">
+					<span class="candidate-title">${esc(item.title || `候选动作 ${no}`)}</span>
+					${meta ? `<span class="candidate-meta">${esc(meta)}</span>` : ''}
+				</span>
+				${thumb ? `<img class="candidate-thumb" src="${esc(thumb)}" alt="" loading="lazy" />` : ''}
+			</label>`
+		})
+		.join('')
+
+	return new Promise((resolve) => {
+		const modal = createModal({
+			name: 'rerecord-candidates',
+			dialogClass: 'modal-candidates',
+			title: `选择要替换第 ${session.stepNo} 步的动作`,
+			bodyHtml: `<p class="dialog-lead">下面是这次录到的动作。选一个最接近原来那一步的，用它替换第 ${session.stepNo} 步；这一步的编号和引用不会变。</p>
+				<div class="candidate-list" role="radiogroup" aria-label="候选动作">${itemsHtml}</div>
+				<p class="dialog-error" id="rerecord-error" hidden></p>`,
+			actionsHtml: `<button type="button" class="btn btn-ghost" data-dialog-action="cancel">放弃这次重录</button>
+				<button type="button" class="btn btn-primary" data-dialog-action="confirm">用它替换第 ${session.stepNo} 步</button>`,
+			onClose: (value) => resolve(value || null),
+		})
+		const list = modal.root.querySelector('.candidate-list')
+		const errorNode = modal.root.querySelector('#rerecord-error')
+		const confirmButton = modal.root.querySelector('[data-dialog-action="confirm"]')
+		const cancelButton = modal.root.querySelector('[data-dialog-action="cancel"]')
+
+		const submit = async () => {
+			const checked = list.querySelector('input[name="rerecord-candidate"]:checked')
+			const candidate = checked
+				? candidates.find((item) => item && item.id === checked.value)
+				: null
+			if (!candidate) {
+				errorNode.textContent = '请先选一个动作'
+				errorNode.hidden = false
+				return
+			}
+			confirmButton.disabled = true
+			confirmButton.innerHTML = '<span class="spinner"></span>正在替换…'
+			errorNode.hidden = true
+			try {
+				const res = await api(
+					`/api/flows/${encodeURIComponent(session.file)}/steps/${encodeURIComponent(session.stepId)}/replace`,
+					{ method: 'POST', body: { tempFile: cfg.tempFile, tempStepId: candidate.id } }
+				)
+				modal.close({ res, candidate })
+			} catch (err) {
+				confirmButton.textContent = `用它替换第 ${session.stepNo} 步`
+				confirmButton.disabled = false
+				errorNode.textContent = err.message
+				errorNode.hidden = false
+			}
+		}
+
+		confirmButton.addEventListener('click', () => void submit())
+		cancelButton.addEventListener('click', () => modal.close(null))
+		confirmButton.focus()
+	})
+}
+
 /* ------------------------------ 流程列表 -------------------------------- */
 
 async function loadConfig() {
@@ -990,6 +1538,7 @@ async function selectFlow(file) {
 	state.suggestionsError = ''
 	state.ignoredSuggestions = new Set()
 	state.showIgnoredSuggestions = false
+	ensureProfiles()
 	renderAll()
 
 	// detail 与 suggestions 并行拉取；建议失败只影响建议区，不阻塞主流程
@@ -1230,7 +1779,7 @@ function renderRecordingChrome() {
 	}
 
 	if (!recording) {
-		if (dom.startBtn) dom.startBtn.disabled = false
+		if (dom.startBtn) dom.startBtn.disabled = hasActiveSession()
 		return
 	}
 	const stopping = Boolean(recording.stopping)
@@ -1255,6 +1804,7 @@ function renderDetailHeader() {
 			`<div class="detail-title-row">
 				<h2>${stopping ? '正在保存并自检…' : '正在录制…'}</h2>
 				<span class="chip ${stopping ? 'chip-running' : 'chip-recorded'}">${stopping ? '保存中' : '录制中'}</span>
+				${loginStateHtmlFor(originOfUrl(recording.url), { disabled: true })}
 			</div>
 			<p class="detail-sub">${
 				stopping
@@ -1324,6 +1874,7 @@ function renderDetailHeader() {
 		`<div class="detail-title-row">
 			<h2>${esc(flow.title || state.selectedFile)}</h2>
 			${version > 1 ? `<span class="chip">第 ${version} 版</span>` : ''}
+			${loginStateHtml()}
 			<div class="detail-actions">
 				<button type="button" class="btn btn-small btn-ghost" data-action="begin-rename">重命名</button>
 				<button type="button" class="btn btn-small btn-ghost" data-action="reload-detail" title="重新读取流程文件">重新加载</button>
@@ -1538,7 +2089,7 @@ function stepRowHtml(step, index, allSteps, results, allowDelete) {
 	const reasonHtml = displayReason
 		? `<div class="step-reason">${esc(displayReason)}</div>${
 				status === 'fail' && !recording
-					? '<div class="step-reason-hint">可以删掉这一步，重新录制一次流程</div>'
+					? '<div class="step-reason-hint">可以删掉这一步，也可以点右侧「重录」只重录这一步</div>'
 					: ''
 			}`
 		: ''
@@ -1558,6 +2109,11 @@ function stepRowHtml(step, index, allSteps, results, allowDelete) {
 		</div>
 		<div class="step-extras">
 			${thumb ? `<button type="button" class="thumb-btn" data-action="zoom" data-src="${esc(thumb)}" data-name="第 ${no} 步 ${esc(title)}" aria-label="查看这一步的截图"><img src="${esc(thumb)}" alt="" loading="lazy" /></button>` : ''}
+			${
+				allowDelete && item.id && item.kind !== 'group'
+					? `<button type="button" class="btn btn-tiny btn-ghost" data-action="rerecord-start" data-step-id="${esc(item.id)}" ${state.recording || isRunActive() || state.login || state.rerecord ? 'disabled' : ''} title="只重录这一步，不用整条重来">重录</button>`
+					: ''
+			}
 			${allowDelete && item.id ? `<button type="button" class="btn btn-tiny btn-ghost" data-action="delete-step" data-step-id="${esc(item.id)}">删除</button>` : ''}
 		</div>
 	</div>`
@@ -1810,11 +2366,12 @@ function updatePlayControls() {
 		Boolean(state.recording) ||
 		Boolean(state.run && (state.run.status === 'starting' || state.run.status === 'running'))
 	const hasFlow = Boolean(state.detail) && !state.recording
+	const sessionBusy = hasActiveSession()
 
-	if (play) play.disabled = running || !hasFlow
-	if (selfCheck) selfCheck.disabled = running || !hasFlow
-	if (runs) runs.disabled = running
-	if (headed) headed.disabled = running
+	if (play) play.disabled = running || !hasFlow || sessionBusy
+	if (selfCheck) selfCheck.disabled = running || !hasFlow || sessionBusy
+	if (runs) runs.disabled = running || sessionBusy
+	if (headed) headed.disabled = running || sessionBusy
 
 	const recording = Boolean(state.recording)
 	for (const node of [play, selfCheck]) {
@@ -2092,6 +2649,10 @@ function clearUrlError() {
 
 async function startRecording() {
 	if (state.recording) return
+	if (hasActiveSession()) {
+		toast('请先完成或取消当前的登录 / 重录操作', 'info')
+		return
+	}
 	clearUrlError()
 
 	const raw = dom.urlInput ? dom.urlInput.value.trim() : ''
@@ -2117,6 +2678,7 @@ async function startRecording() {
 
 		state.recording = {
 			sessionId: String(result.sessionId),
+			url,
 			steps: [],
 			elapsedMs: 0,
 			stopping: false,
@@ -2282,6 +2844,10 @@ function clearVarsError() {
 
 async function startPlay(kind) {
 	if (!state.detail || state.recording) return
+	if (hasActiveSession()) {
+		toast('请先完成或取消当前的登录 / 重录操作', 'info')
+		return
+	}
 
 	const missing = missingVariables()
 	if (missing.length) {
@@ -2433,6 +2999,10 @@ async function saveRename() {
 
 async function deleteStep(stepId) {
 	if (!state.selectedFile || !state.detail || !stepId) return
+	if (hasActiveSession()) {
+		toast('登录 / 重录进行中，等结束再删除步骤', 'info')
+		return
+	}
 	const steps = Array.isArray(state.detail.steps) ? state.detail.steps : []
 	const index = steps.findIndex((step) => step && step.id === stepId)
 	const step = index >= 0 ? steps[index] : null
@@ -2494,6 +3064,10 @@ function handleClick(event) {
 			const file = target.getAttribute('data-file') || ''
 			if (state.recording) {
 				toast('正在录制，先停止并保存再切换流程', 'info')
+				return
+			}
+			if (hasActiveSession()) {
+				toast('请先完成或取消当前的登录 / 重录操作', 'info')
 				return
 			}
 			if (file && file !== state.selectedFile) void selectFlow(file)
@@ -2575,6 +3149,27 @@ function handleClick(event) {
 			return
 		case 'rename-var':
 			void renameVariable(target.getAttribute('data-name') || '')
+			return
+		case 'login-update':
+			void startLoginUpdate()
+			return
+		case 'login-stop':
+			void stopLogin()
+			return
+		case 'login-cancel':
+			void cancelLogin()
+			return
+		case 'login-clear':
+			void clearLoginProfile()
+			return
+		case 'rerecord-start':
+			void startRerecord(target.getAttribute('data-step-id') || '')
+			return
+		case 'rerecord-stop':
+			void stopRerecord()
+			return
+		case 'rerecord-cancel':
+			void cancelRerecord()
 			return
 		default:
 			return
@@ -2677,7 +3272,7 @@ async function init() {
 	bindEvents()
 	renderAll()
 
-	await Promise.all([loadConfig(), loadFlows()])
+	await Promise.all([loadConfig(), loadFlows(), loadProfiles({ silent: true })])
 
 	let deepLink = ''
 	try {

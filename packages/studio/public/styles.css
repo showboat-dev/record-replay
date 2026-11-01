@@ -1917,3 +1917,140 @@ code {
 	margin: 0;
 	overflow-wrap: anywhere;
 }
+
+/* =========================================================================
+   Sprint 1：登录态 chip + 单步重录（docs/profiles-rerecord.md）
+   ========================================================================= */
+
+.login-state {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.chip-login-saved {
+	background: #dcfce7;
+	color: #166534;
+	gap: 4px;
+}
+
+.chip-login-none {
+	background: #f1f5f9;
+	color: #64748b;
+	gap: 4px;
+}
+
+.chip-login-pending {
+	background: #dbeafe;
+	color: #1d4ed8;
+	gap: 4px;
+}
+
+.banner-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.banner-timer {
+	font-size: 13px;
+	font-weight: 600;
+	color: inherit;
+	opacity: 0.7;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* 候选动作单选列表 */
+.modal-candidates {
+	width: min(660px, 100%);
+	max-height: 90vh;
+	overflow-y: auto;
+}
+
+.candidate-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 46vh;
+	overflow-y: auto;
+	margin-top: 10px;
+	padding-right: 2px;
+}
+
+.candidate-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 12px;
+	border: 1.5px solid var(--line-strong);
+	border-radius: 10px;
+	background: #fbfcfe;
+	cursor: pointer;
+	transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+}
+
+.candidate-item:hover {
+	background: #f5f8fd;
+	border-color: #aab5c8;
+}
+
+.candidate-item:has(input:checked) {
+	border-color: var(--primary);
+	background: var(--primary-soft);
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.candidate-item input[type='radio'] {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--primary);
+	flex: 0 0 auto;
+	cursor: pointer;
+}
+
+.candidate-no {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: #eef1f7;
+	color: var(--muted);
+	font-size: 12.5px;
+	font-weight: 700;
+	display: grid;
+	place-items: center;
+	flex: 0 0 auto;
+	font-variant-numeric: tabular-nums;
+}
+
+.candidate-main {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	flex: 1;
+}
+
+.candidate-title {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--text);
+	overflow-wrap: anywhere;
+}
+
+.candidate-meta {
+	font-size: 12.5px;
+	color: var(--faint);
+	overflow-wrap: anywhere;
+}
+
+.candidate-thumb {
+	width: 64px;
+	height: 40px;
+	object-fit: cover;
+	border-radius: 6px;
+	border: 1px solid var(--line);
+	flex: 0 0 auto;
+}

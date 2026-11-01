@@ -4,7 +4,7 @@
  * 失败一律走 classifyError 落语义错误码，绝不把裸 timeout 抛给上层；
  * artifact 只在失败（或 screenshotMode='all'）时落盘，避免每步都写磁盘。
  */
-import { chromium, type Locator, type Page } from 'playwright'
+import { chromium, type BrowserContext, type Locator, type Page } from 'playwright'
 
 import type { ElementRef, Flow } from '@rr/schema'
 import { makeId } from '@rr/schema'
@@ -22,6 +22,11 @@ import {
 import { DialogManager, type DialogMode } from './dialogs.js'
 import { DownloadManager } from './downloads.js'
 import { flattenSteps, hasStepKind } from './steps.js'
+import {
+	appendLoginExpiredHint,
+	loadStorageState,
+	saveContextStorageState,
+} from './storage-state.js'
 import { PageManager, resolveStepPageIndex } from './tabs.js'
 import { defaultVariables, renderStep } from './template.js'
 import { NAME_KEEPALIVE_SOURCE, rebaseUrl } from './url.js'
@@ -132,6 +137,16 @@ async function activeElementSig(page: Page): Promise<string> {
 		.catch(() => '')
 }
 
+/** 取当前 page 的 URL；页面已关闭/崩溃时返回 undefined（用于登录过期提示判断） */
+export function safePageUrl(page: Page | undefined): string | undefined {
+	if (!page) return undefined
+	try {
+		return page.url()
+	} catch {
+		return undefined
+	}
+}
+
 function dialogManagerHistoryChanged(before: number, after: number): boolean {
 	return after > before
 }
@@ -235,18 +250,31 @@ export async function executeRun(
 
 	const browser = await chromium.launch({ headless: opts.headless ?? true })
 	let browserCrashed = false
+	/** finally 里保存登录态要用（context 在 try 内创建，作用域不外溢） */
+	let contextForSave: BrowserContext | undefined
 
 	try {
 		const env = flow.meta.env
+		// 登录态：文件不存在/非法都不阻塞回放，只是按"未登录"跑（契约 §A.2）
+		const storageState = await loadStorageState(opts.storageStatePath, pushLog)
+		if (storageState) {
+			pushLog(
+				`已加载登录态：${opts.storageStatePath}（${storageState.cookies.length} 个 cookie、` +
+					`${storageState.origins.length} 个 origin 的 localStorage）`,
+			)
+		}
+
 		const context = await browser.newContext({
 			viewport: { width: env.viewport.width, height: env.viewport.height },
 			deviceScaleFactor: env.dpr,
 			...(env.locale ? { locale: env.locale } : {}),
 			...(env.timezone ? { timezoneId: env.timezone } : {}),
 			...(env.userAgent ? { userAgent: env.userAgent } : {}),
+			...(storageState ? { storageState } : {}),
 		})
 		// keepNames 垫片：resolver/executor 里有函数被 page.evaluate 序列化进页面，
 		// esbuild/tsx 注入的 __name(...) 在页面里不存在会导致 ReferenceError（真实站点 L2 挂掉的根因）
+		contextForSave = context
 		await context.addInitScript({ content: NAME_KEEPALIVE_SOURCE })
 		await context.newPage()
 		// 多标签页：index 0 = 起点页，之后按创建顺序追加（与录制端一致）
@@ -425,6 +453,7 @@ export async function executeRun(
 				if (!opened) throw lastErr
 			} catch (err) {
 				const classified = classifyError(err, 'navigate')
+				classified.message = appendLoginExpiredHint(classified.message, safePageUrl(page))
 				const stepResult: StepResult = {
 					stepId: '<startUrl>',
 					kind: 'navigate',
@@ -661,6 +690,9 @@ export async function executeRun(
 				if (expectNote !== undefined) stepLogPush(`expect ✓ ${expectNote}`)
 			} catch (err) {
 				const classified = classifyError(err, phase)
+				// 登录过期启发式：失败时 URL 停在登录页 → 在 message 末尾补一句人话（code 不变）
+				const failureUrl = safePageUrl(page)
+				classified.message = appendLoginExpiredHint(classified.message, failureUrl)
 				detail.status = 'fail'
 				detail.error = classified
 				stepLogPush(`FAIL[${classified.code}] ${classified.message}`)
@@ -726,6 +758,12 @@ export async function executeRun(
 		}
 		observedPageCount = pages.count
 	} finally {
+		// 每个 run 结束（无论成败）都尽力写回登录态：
+		// 放在最前面 —— context 还活着、也避免后面 keepOpen 的等待被人中途 kill 掉导致没保存。
+		if (opts.saveStorageStatePath && contextForSave) {
+			const saved = await saveContextStorageState(contextForSave, opts.saveStorageStatePath, pushLog)
+			if (saved) pushLog(`已保存登录态：${opts.saveStorageStatePath}`)
+		}
 		// 残留对话框必须关掉，否则 browser.close() 可能卡住
 		await dialogManager.dismissRemaining().catch(() => 0)
 		// 等下载保存落盘（result.json 里要写文件名列表）

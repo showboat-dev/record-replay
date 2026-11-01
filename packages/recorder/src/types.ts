@@ -243,6 +243,20 @@ export interface RecordOptions {
 	settleSilenceMs?: number
 	/** flow 标题，默认取 startUrl 的 pathname */
 	title?: string
+
+	/**
+	 * 启动 context 前读取的登录态文件（Playwright `storageState` JSON）。
+	 * 也接受 Studio 的 profile wrapper（`{origin,savedAt,storageState}`）：
+	 * 读失败（不存在/非法 JSON/形状不对）一律当「没有登录态」继续录，不报错。
+	 *
+	 * 典型用法：Studio 按起始 URL 的 origin 找到 `profiles/<originKey>.json` 后传入。
+	 */
+	storageStatePath?: string
+	/**
+	 * 录制停止时把当前 `context.storageState()` 写回该路径（原子写：临时文件 + rename）。
+	 * 失败只告警，不影响 flow 落盘；`drive` 抛错时也会保存（用户可能已经登录成功）。
+	 */
+	saveStorageStatePath?: string
 }
 
 export interface RecordResult {

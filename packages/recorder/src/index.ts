@@ -8,7 +8,7 @@
  *   buildElementRef(facts)      纯函数：页面事实 → ElementRef
  *
  * 规划层纯函数（`plan.ts`）：标签页切换合成 / 对话框插入 / hover 意义过滤 / 下载与上传。
- * 这些也导出给 CLI、executor 与单测复用。
+ * 登录态（`profile.ts`）：loadProfile / saveProfile（原子写），供 Studio / CLI / 单测复用。
  */
 export { record } from './record.js'
 export { coalesceEvents, summarizeAction, actionRawEvents } from './coalesce.js'
@@ -42,6 +42,20 @@ export {
 	HOVER_WAIT_MS,
 } from './plan.js'
 export type { TabSwitchState } from './plan.js'
+export {
+	describeStorageState,
+	isStorageState,
+	loadProfile,
+	saveProfile,
+} from './profile.js'
+export type {
+	LoadProfileResult,
+	ProfileShape,
+	ProfileStatus,
+	SaveProfileOptions,
+	SaveProfileResult,
+	StorageState,
+} from './profile.js'
 export { CAPTURE_SCRIPT_PATH, EMIT_BINDING, UID_ATTR, ensureCaptureInPage } from './capture-client.js'
 export type {
 	RecordOptions,

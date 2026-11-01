@@ -17,6 +17,16 @@ export * from './steps.js'
 export * from './selfheal.js'
 export * from './url.js'
 export {
+	appendLoginExpiredHint,
+	loadStorageState,
+	looksLikeLoginUrl,
+	LOGIN_EXPIRED_HINT,
+	parseStorageState,
+	saveContextStorageState,
+	saveStorageStateAtomic,
+	type BrowserStorageState,
+} from './storage-state.js'
+export {
 	ArtifactWriter,
 	sanitizeDownloadName,
 	sanitizeSegment,

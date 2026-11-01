@@ -6,10 +6,12 @@
  * 契约见 docs/studio-api.md；前端在 packages/studio/public（纯静态）。
  */
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, readdir, stat as fsStat } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, stat as fsStat } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { chromium, type Browser, type BrowserContext } from 'playwright'
 
 import { loadFlow, makeId, saveFlow, type Flow, type Step, type Variable } from '@rr/schema'
 import {
@@ -26,14 +28,27 @@ import {
 import { playRuns, type RunResult, type StepResult } from '@rr/executor'
 import { record, type RecordOptions } from '@rr/recorder'
 
+import {
+	deleteProfile,
+	listProfiles,
+	originOf,
+	profilePathFor,
+	storageStatePathIfExists,
+	writeProfile,
+	type ProfileMeta,
+} from './profiles.js'
+
 const ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 /** 默认目录（生产用）；测试/多实例可用 createStudioServer({flowsDir, artifactsDir}) 或环境变量覆盖 */
 const DEFAULT_FLOWS_DIR = join(ROOT, 'flows')
 const DEFAULT_ARTIFACTS_DIR = join(ROOT, 'artifacts')
+const DEFAULT_PROFILES_DIR = join(ROOT, 'profiles')
 
 export interface StudioConfig {
 	flowsDir: string
 	artifactsDir: string
+	/** 登录态（storageState）目录，见 docs/profiles-rerecord.md §A */
+	profilesDir: string
 }
 
 /**
@@ -43,7 +58,10 @@ export interface StudioConfig {
 export function resolveStudioConfig(overrides: Partial<StudioConfig> = {}): StudioConfig {
 	return {
 		flowsDir: overrides.flowsDir ?? process.env.RR_STUDIO_FLOWS_DIR ?? DEFAULT_FLOWS_DIR,
-		artifactsDir: overrides.artifactsDir ?? process.env.RR_STUDIO_ARTIFACTS_DIR ?? DEFAULT_ARTIFACTS_DIR,
+		artifactsDir:
+			overrides.artifactsDir ?? process.env.RR_STUDIO_ARTIFACTS_DIR ?? DEFAULT_ARTIFACTS_DIR,
+		profilesDir:
+			overrides.profilesDir ?? process.env.RR_STUDIO_PROFILES_DIR ?? DEFAULT_PROFILES_DIR,
 	}
 }
 const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url))
@@ -143,21 +161,44 @@ interface StepSummary {
 	screenshot?: string
 }
 
+function summarizeStep(step: Step, index: number, flowId?: string): StepSummary {
+	const target =
+		'target' in step && step.target ? (step.target as { crop?: { ref: string } }) : undefined
+	const cropRef = target?.crop?.ref
+	return {
+		index,
+		id: step.id,
+		kind: step.kind,
+		title: stepTitle(step),
+		...(step.expect ? { expect: step.expect.kind } : {}),
+		// 录制时保存的元素裁剪图（相对 artifacts/<flowId>/ 的路径）
+		...(flowId && cropRef ? { screenshot: `/artifacts/${flowId}/${cropRef}` } : {}),
+	}
+}
+
 export function summarize(flow: Flow): StepSummary[] {
-	return flattenSteps(flow.steps).map((step, index) => {
-		const target =
-			'target' in step && step.target ? (step.target as { crop?: { ref: string } }) : undefined
-		const cropRef = target?.crop?.ref
-		return {
-			index,
-			id: step.id,
-			kind: step.kind,
-			title: stepTitle(step),
-			...(step.expect ? { expect: step.expect.kind } : {}),
-			// 录制时保存的元素裁剪图（相对 artifacts/<flowId>/ 的路径）
-			...(cropRef ? { screenshot: `/artifacts/${flow.id}/${cropRef}` } : {}),
+	return flattenSteps(flow.steps).map((step, index) => summarizeStep(step, index, flow.id))
+}
+
+/**
+ * 录制器写回登录态时：文件已存在且是 Studio wrapper（{origin,savedAt,storageState}）→ 保持 wrapper；
+ * 首次创建时录制器写的是**裸 storageState** → 这里转成 wrapper（docs/profiles-rerecord.md §A.1），
+ * 否则 /api/profiles 列表读不到（readProfileMeta 只认 wrapper）。
+ */
+async function normalizeProfileFile(config: StudioConfig, origin: string): Promise<void> {
+	const path = profilePathFor(config.profilesDir, origin)
+	try {
+		const raw = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>
+		if (raw.storageState && typeof raw.storageState === 'object') return // 已是 wrapper
+		if (Array.isArray(raw.cookies)) {
+			await writeProfile(config.profilesDir, origin, {
+				cookies: raw.cookies,
+				origins: Array.isArray(raw.origins) ? raw.origins : [],
+			})
 		}
-	})
+	} catch {
+		/* 没有 profile / 内容坏：什么都不做 */
+	}
 }
 
 /* ------------------------------------------------------------------ */
@@ -174,6 +215,23 @@ interface RecordSession {
 	controller: AbortController
 	promise: Promise<{ flow: Flow; artifactsDir: string } | null>
 	cancelled: boolean
+	/** record = 正常录制（停止后自检）；rerecord = 单步重录的候选录制（停止后返回候选） */
+	purpose: 'record' | 'rerecord'
+	targetFile?: string
+	targetStepId?: string
+}
+
+/** 显式"登录/更新登录态"会话（不录制，只负责保存 storageState） */
+interface LoginSession {
+	id: string
+	url: string
+	origin: string
+	profilesDir: string
+	startedAt: number
+	browser: Browser
+	context: BrowserContext
+	timer: NodeJS.Timeout
+	closed: boolean
 }
 
 interface PlaybackRun {
@@ -199,6 +257,7 @@ interface PlaybackRun {
 
 const sessions = new Map<string, RecordSession>()
 const playbackRuns = new Map<string, PlaybackRun>()
+const loginSessions = new Map<string, LoginSession>()
 
 /* ------------------------------------------------------------------ */
 /* HTTP 工具                                                           */
@@ -313,9 +372,14 @@ async function startRecording(
 		controller,
 		promise: Promise.resolve(null),
 		cancelled: false,
+		purpose: 'record',
 	}
 	sessions.set(id, session)
 
+	// 登录态：有 profile 就带上；录制停止时自动写回（刷新过期时间/cookie）
+	const origin = originOf(url)
+	await mkdir(config.profilesDir, { recursive: true }).catch(() => {})
+	const storageStatePath = await storageStatePathIfExists(config.profilesDir, origin)
 	const options: RecordOptions = {
 		startUrl: url,
 		outPath: join(config.flowsDir, file),
@@ -330,15 +394,20 @@ async function startRecording(
 			})
 		},
 	}
+	if (storageStatePath) Object.assign(options, { storageStatePath })
+	if (origin)
+		Object.assign(options, { saveStorageStatePath: profilePathFor(config.profilesDir, origin) })
 	// 录制时让用户自己操作；record() 在 stop 后落盘
 	session.promise = record(options)
-		.then((result) => {
+		.then(async (result) => {
+			if (origin) await normalizeProfileFile(config, origin)
 			if (!session.cancelled) {
 				console.log(`[studio] 录制完成：${file}（${result.flow.steps.length} 步）`)
 			}
 			return result
 		})
-		.catch((err: Error) => {
+		.catch(async (err: Error) => {
+			if (origin) await normalizeProfileFile(config, origin)
 			console.error(`[studio] 录制失败：${err.message}`)
 			return null
 		})
@@ -383,6 +452,236 @@ async function runSelfCheck(flow: Flow, file: string): Promise<Record<string, un
 }
 
 /* ------------------------------------------------------------------ */
+/* 登录态（docs/profiles-rerecord.md §A）                               */
+/* ------------------------------------------------------------------ */
+
+async function closeLoginSession(id: string, save: boolean): Promise<ProfileMeta | null> {
+	const session = loginSessions.get(id)
+	if (!session || session.closed) return null
+	session.closed = true
+	clearTimeout(session.timer)
+	loginSessions.delete(id)
+	let meta: ProfileMeta | null = null
+	if (save) {
+		try {
+			const state = await session.context.storageState()
+			meta = await writeProfile(session.profilesDir, session.origin, state)
+		} catch (err) {
+			console.error(`[studio] 保存登录态失败：${(err as Error).message}`)
+		}
+	}
+	await session.browser.close().catch(() => {})
+	return meta
+}
+
+async function startLoginSession(
+	config: StudioConfig,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+	const url = String(body.url ?? '').trim()
+	if (!url) throw new Error('缺少网址 url')
+	const origin = originOf(url)
+	if (!origin) throw new Error('网址格式不对（需要 http:// 或 https:// 开头）')
+	await mkdir(config.profilesDir, { recursive: true }).catch(() => {})
+	const storageStatePath = await storageStatePathIfExists(config.profilesDir, origin)
+	const browser = await chromium.launch({ headless: false })
+	const context = await browser.newContext({
+		viewport: { width: 1440, height: 900 },
+		...(storageStatePath ? { storageState: storageStatePath } : {}),
+	})
+	const page = await context.newPage()
+	await page.goto(url, { timeout: 30_000, waitUntil: 'domcontentloaded' }).catch(() => {})
+	const id = makeId('login')
+	const timer = setTimeout(
+		() => {
+			void closeLoginSession(id, false)
+		},
+		10 * 60 * 1000,
+	)
+	timer.unref?.()
+	loginSessions.set(id, {
+		id,
+		url,
+		origin,
+		profilesDir: config.profilesDir,
+		startedAt: Date.now(),
+		browser,
+		context,
+		timer,
+		closed: false,
+	})
+	return { sessionId: id, origin }
+}
+
+async function stopLoginSession(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+	const id = String(body.sessionId ?? '')
+	if (!loginSessions.has(id)) throw new Error('登录会话不存在或已结束')
+	const meta = await closeLoginSession(id, true)
+	if (!meta) throw new Error('保存登录态失败，请重试')
+	console.log(`[studio] 登录态已保存：${meta.origin}（cookie ${meta.cookieCount}）`)
+	return { ok: true, profile: meta }
+}
+
+async function cancelLoginSession(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+	const id = String(body.sessionId ?? '')
+	await closeLoginSession(id, false)
+	return { ok: true }
+}
+
+/* ------------------------------------------------------------------ */
+/* 单步重录（docs/profiles-rerecord.md §B）                             */
+/* ------------------------------------------------------------------ */
+
+/** 在顶层 steps 里找步骤；分组内的步骤暂不支持单步重录 */
+function findTopLevelStep(flow: Flow, stepId: string): { step: Step; index: number } {
+	const index = flow.steps.findIndex((step) => step.id === stepId)
+	if (index < 0) {
+		const nested = flattenSteps(flow.steps).some((step) => step.id === stepId)
+		if (nested) throw new Error('暂不支持重录分组内的步骤')
+		throw new Error('步骤不存在')
+	}
+	return { step: flow.steps[index]!, index }
+}
+
+async function startRerecord(
+	config: StudioConfig,
+	file: string,
+	stepId: string,
+): Promise<Record<string, unknown>> {
+	const flowFile = flowFileFromName(config, file)
+	if (!flowFile) throw new Error('流程文件不存在')
+	const flow = await loadFlow(flowFile)
+	const { step, index } = findTopLevelStep(flow, stepId)
+	const startUrl = flow.meta.env.startUrl
+	const id = makeId('rr')
+	const tempFile = `.rerecord/${id}.json`
+	const tempAbs = join(config.flowsDir, tempFile)
+	await mkdir(join(config.flowsDir, '.rerecord'), { recursive: true })
+
+	const controller = new AbortController()
+	const session: RecordSession = {
+		id,
+		url: startUrl,
+		title: `重录 ${stepId}`,
+		file: tempFile,
+		startedAt: Date.now(),
+		steps: [],
+		controller,
+		promise: Promise.resolve(null),
+		cancelled: false,
+		purpose: 'rerecord',
+		targetFile: file,
+		targetStepId: stepId,
+	}
+	sessions.set(id, session)
+
+	const origin = originOf(startUrl)
+	const storageStatePath = await storageStatePathIfExists(config.profilesDir, origin)
+	const options: RecordOptions = {
+		startUrl,
+		outPath: tempAbs,
+		headless: false,
+		stopSignal: controller.signal,
+		onStep: (s) => {
+			session.steps.push({
+				index: session.steps.length,
+				id: s.id,
+				kind: s.kind,
+				title: stepTitle(s),
+			})
+		},
+	}
+	if (storageStatePath) Object.assign(options, { storageStatePath })
+	if (origin)
+		Object.assign(options, { saveStorageStatePath: profilePathFor(config.profilesDir, origin) })
+	session.promise = record(options)
+		.then(async (result) => {
+			if (origin) await normalizeProfileFile(config, origin)
+			return result
+		})
+		.catch(async (err: Error) => {
+			if (origin) await normalizeProfileFile(config, origin)
+			console.error(`[studio] 单步重录失败：${err.message}`)
+			return null
+		})
+	return {
+		sessionId: id,
+		startUrl,
+		target: { stepId, stepIndex: index, title: stepTitle(step) },
+	}
+}
+
+async function stopRerecord(
+	config: StudioConfig,
+	file: string,
+	stepId: string,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+	const session = sessions.get(String(body.sessionId ?? ''))
+	if (!session || session.purpose !== 'rerecord') throw new Error('重录会话不存在')
+	if (session.targetFile !== file || session.targetStepId !== stepId)
+		throw new Error('重录会话与目标步骤不匹配')
+	session.controller.abort()
+	await session.promise.catch(() => null)
+	const tempAbs = join(config.flowsDir, session.file)
+	let candidates: Array<StepSummary & { stepId: string }> = []
+	try {
+		const tempFlow = await loadFlow(tempAbs)
+		candidates = flattenSteps(tempFlow.steps).map((s, index) => ({
+			...summarizeStep(s, index),
+			stepId: s.id,
+		}))
+	} catch {
+		/* 没有录到任何动作（文件不存在/非法）→ 空候选 */
+	}
+	sessions.delete(session.id)
+	return { candidates, tempFile: session.file }
+}
+
+async function cancelRerecord(
+	config: StudioConfig,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+	const session = sessions.get(String(body.sessionId ?? ''))
+	if (!session || session.purpose !== 'rerecord') return { ok: true }
+	session.cancelled = true
+	session.controller.abort()
+	await session.promise.catch(() => null)
+	await rm(join(config.flowsDir, session.file), { force: true }).catch(() => {})
+	sessions.delete(session.id)
+	return { ok: true }
+}
+
+/** 把候选步骤替换到原流程（保留原 stepId，version+1，写 .bak） */
+async function replaceStep(
+	config: StudioConfig,
+	file: string,
+	stepId: string,
+	body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+	const tempFile = String(body.tempFile ?? '')
+	const tempStepId = String(body.tempStepId ?? '')
+	if (!/^\.rerecord\/[A-Za-z0-9_.-]+\.json$/.test(tempFile))
+		throw new ApiParamError('临时录制文件不合法')
+	if (!tempStepId) throw new ApiParamError('缺少要替换的候选步骤')
+	const tempFlow = await loadFlow(join(config.flowsDir, tempFile))
+	const candidate = flattenSteps(tempFlow.steps).find((step) => step.id === tempStepId)
+	if (!candidate) throw new ApiParamError('候选步骤不存在')
+	if (candidate.kind === 'group') throw new ApiParamError('不能用一个分组替换单步')
+	const next = structuredClone(candidate) as Step
+	next.id = stepId // 保留原步骤 id：历史/引用稳定
+	const flow = await updateFlow(config, file, (f) => {
+		const { index } = findTopLevelStep(f, stepId)
+		const prevPage = (f.steps[index] as { page?: { index: number } }).page
+		if (prevPage) (next as { page?: { index: number } }).page = prevPage
+		f.steps[index] = next
+		f.version = f.version + 1
+	})
+	await rm(join(config.flowsDir, tempFile), { force: true }).catch(() => {})
+	return appliedResponse(flow)
+}
+
+/* ------------------------------------------------------------------ */
 /* 回放                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -404,7 +703,12 @@ async function startPlayback(
 		try {
 			// 业务人员默认看得到浏览器：headed 时放慢节奏 + 高亮目标，看起来像"有人在帮你填"
 			const headed = body.headed === undefined ? true : Boolean(body.headed)
-			const results: RunResult[] = await playRuns({
+			// 登录态：回放自动带该站点已保存的 cookie/localStorage（docs/profiles-rerecord.md §A.2）
+			const playStorage = await storageStatePathIfExists(
+				config.profilesDir,
+				originOf(flow.meta.env.startUrl),
+			)
+			const playOptions: Parameters<typeof playRuns>[0] = {
 				flow,
 				runs,
 				headless: !headed,
@@ -417,7 +721,9 @@ async function startPlayback(
 							keepOpenOnFailureMs: 20_000,
 						}
 					: {}),
-			})
+			}
+			if (playStorage) Object.assign(playOptions, { storageStatePath: playStorage })
+			const results: RunResult[] = await playRuns(playOptions)
 			job.runs = results.map((r) => ({
 				ok: r.ok,
 				steps: r.steps.map((s, stepIndex) => ({
@@ -677,7 +983,11 @@ async function handleApi(
 		if (!flowFile) return (json(res, 404, { error: 'flow 不存在' }), true)
 		const flow = await loadFlow(flowFile)
 		try {
-			json(res, 200, analyzeFlow(flow, { includeWeak: parseIncludeWeak(url.searchParams.get('includeWeak')) }))
+			json(
+				res,
+				200,
+				analyzeFlow(flow, { includeWeak: parseIncludeWeak(url.searchParams.get('includeWeak')) }),
+			)
 		} catch (err) {
 			sendSuggestError(res, err)
 		}
@@ -741,6 +1051,85 @@ async function handleApi(
 				f.version = f.version + 1
 			})
 			json(res, 200, { ok: true, flow })
+		} catch (err) {
+			sendSuggestError(res, err)
+		}
+		return true
+	}
+
+	/* ---------- 登录态（docs/profiles-rerecord.md §A.3） ---------- */
+
+	if (path === '/api/profiles' && method === 'GET') {
+		json(res, 200, { profiles: await listProfiles(config.profilesDir) })
+		return true
+	}
+	if (path === '/api/profiles/login/start' && method === 'POST') {
+		try {
+			json(res, 200, await startLoginSession(config, await readBody(req)))
+		} catch (err) {
+			json(res, 400, { error: (err as Error).message })
+		}
+		return true
+	}
+	if (path === '/api/profiles/login/status' && method === 'GET') {
+		const session = loginSessions.get(url.searchParams.get('sessionId') ?? '')
+		json(
+			res,
+			200,
+			session ? { running: true, elapsedMs: Date.now() - session.startedAt } : { running: false },
+		)
+		return true
+	}
+	if (path === '/api/profiles/login/stop' && method === 'POST') {
+		try {
+			json(res, 200, await stopLoginSession(await readBody(req)))
+		} catch (err) {
+			json(res, 400, { error: (err as Error).message })
+		}
+		return true
+	}
+	if (path === '/api/profiles/login/cancel' && method === 'POST') {
+		try {
+			json(res, 200, await cancelLoginSession(await readBody(req)))
+		} catch (err) {
+			json(res, 400, { error: (err as Error).message })
+		}
+		return true
+	}
+	const profileMatch = /^\/api\/profiles\/([^/]+)$/.exec(path)
+	if (profileMatch && method === 'DELETE') {
+		const originKey = decodeURIComponent(profileMatch[1]!)
+		const ok = await deleteProfile(config.profilesDir, originKey)
+		json(res, ok ? 200 : 404, ok ? { ok: true } : { error: '登录态不存在' })
+		return true
+	}
+
+	/* ---------- 单步重录（docs/profiles-rerecord.md §B.2） ---------- */
+
+	const rerecordMatch =
+		/^\/api\/flows\/([^/]+)\/steps\/([^/]+)\/rerecord\/(start|stop|cancel)$/.exec(path)
+	if (rerecordMatch && method === 'POST') {
+		const file = decodeURIComponent(rerecordMatch[1]!)
+		const stepId = decodeURIComponent(rerecordMatch[2]!)
+		const action = rerecordMatch[3]!
+		if (!flowFileFromName(config, file)) return (json(res, 404, { error: 'flow 不存在' }), true)
+		try {
+			const body = await readBody(req)
+			if (action === 'start') json(res, 200, await startRerecord(config, file, stepId))
+			else if (action === 'stop') json(res, 200, await stopRerecord(config, file, stepId, body))
+			else json(res, 200, await cancelRerecord(config, body))
+		} catch (err) {
+			json(res, 400, { error: (err as Error).message })
+		}
+		return true
+	}
+	const replaceMatch = /^\/api\/flows\/([^/]+)\/steps\/([^/]+)\/replace$/.exec(path)
+	if (replaceMatch && method === 'POST') {
+		const file = decodeURIComponent(replaceMatch[1]!)
+		const stepId = decodeURIComponent(replaceMatch[2]!)
+		if (!flowFileFromName(config, file)) return (json(res, 404, { error: 'flow 不存在' }), true)
+		try {
+			json(res, 200, await replaceStep(config, file, stepId, await readBody(req)))
 		} catch (err) {
 			sendSuggestError(res, err)
 		}

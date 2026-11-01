@@ -80,6 +80,21 @@ P50 93ms / P95 354ms
 > `__name(...)`，函数被 `page.evaluate` 序列化进页面后抛 `__name is not defined`，导致 L2 全挂。
 > 已在 resolver/executor/recorder 三处注入页面级垫片修复（`NAME_KEEPALIVE_SOURCE`）。
 
+## 登录态持久化 + 单步重录（Sprint 1）
+
+**登录态**：录制时登录一次，之后录制/回放自动带上（Playwright storageState，按 origin 存 `profiles/`，含 cookie + localStorage）。
+
+- Studio 流程头部显示「已保存/未保存登录态」；「更新登录态」打开浏览器让用户重新登录，点「完成并保存」写入；「清除登录态」删除。
+- 回放失败且当前 URL 命中 `/login|signin|auth|sso|登录/` 时，错误信息追加「登录状态可能已过期，请在 Studio 里点『更新登录态』…」。
+- 已知限制：Playwright `storageState` 不含 sessionStorage（SSO 若把 token 放 sessionStorage 仍会丢）；不做登录态预检。
+
+**单步重录**：某一步失效时只重录这一步，不用整条重来。
+
+- 时间线每步「重录」→ 浏览器打开起始页（自动带登录态）→ 用户手动走到目标位置并操作 → 停止 → 从本次录到的动作里选一个 → 替换第 N 步（保留原 stepId，`version+1`，写 `.bak`）。
+- 这是"方案 A"：不自动回放前缀，避免重复提交等副作用；代价是候选里含导航过程的动作，由用户选择。
+
+契约：`docs/profiles-rerecord.md`；e2e：`e2e/profile-storage.test.ts`（3/3）；Studio API 测试：`packages/studio/src/profiles.api.test.ts`（15 条）。
+
 ## 参数化建议（Phase 1：规则召回 + 一键采纳）
 
 录完流程后，Studio 自动提示"这个值每次都变，要不要变成运行参数？"
