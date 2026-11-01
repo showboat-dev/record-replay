@@ -31,6 +31,19 @@ describe('studio: 人话步骤标题', () => {
 		expect(stepTitle(step({ kind: 'wait', condition: 'element' }))).toContain('等待')
 	})
 
+	it('新能力步骤有人话标题：对话框 / 切标签页 / 标签页前缀', () => {
+		expect(stepTitle(step({ kind: 'dialog', action: 'accept' }))).toContain('弹窗')
+		expect(stepTitle(step({ kind: 'switchTab', index: 1 }))).toContain('第 2 个标签页')
+		const onTab = stepTitle(
+			step({
+				kind: 'click',
+				target: { description: '按钮「提交」', observed: { tag: 'button' } },
+				page: { index: 1 },
+			}),
+		)
+		expect(onTab.startsWith('标签页 2：')).toBe(true)
+	})
+
 	it('未知/新动作不会崩', () => {
 		expect(stepTitle(step({ kind: 'future-action' }))).toBeTruthy()
 	})

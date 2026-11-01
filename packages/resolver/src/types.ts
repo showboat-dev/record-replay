@@ -23,6 +23,8 @@ export interface ResolveOptions {
 	maxFingerprintMatches?: number
 	/** 解析前等待元素出现的最长时间（SPA 首屏/异步渲染），默认 5000ms */
 	elementWaitMs?: number
+	/** HIDDEN（命中但不可见）重试间隔，默认 150ms（hover 展开菜单这类异步可见性） */
+	elementWaitPollMs?: number
 	/**
 	 * 回放环境 origin 覆盖。用于 iframe `urlPattern` 段的重定基：
 	 * 录制时 frame.url 带 5199，回放在 5173，不重定基就永远匹配不上。

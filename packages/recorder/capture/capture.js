@@ -16,12 +16,15 @@
  * 元素寻址：采集时给目标元素打 `data-rr-uid` 临时标记，Node 侧用 `[data-rr-uid=...]`
  * 把它找回来看候选是否 `count()===1 && visible`；处理完调用 `__rrClearUids()` 清掉。
  */
-/* global window, document, location, setTimeout */
+/* global window, document, location, setTimeout, clearTimeout */
 ;(function () {
 	'use strict'
 
-	if (window.__rrCaptureInstalled) return
-	window.__rrCaptureInstalled = true
+	// 用 **document** 做安装标记，不能用 window：
+	// window 在跨文档导航（window.open 到同源页、同源链接跳转）之后仍然存活，
+	// 而 document 会被换掉；只用 window 标记会让「新文档一个监听器都没有」→ 整页录不到事件。
+	if (document.__rrCaptureInstalled) return
+	document.__rrCaptureInstalled = true
 
 	/** 每个 document 一份随机前缀：导航后计数器重置也不会与旧 document 的 uid 撞车 */
 	var DOC_ID = Math.random().toString(36).slice(2, 7)
@@ -475,7 +478,7 @@
 				!event.altKey
 			send(
 				'keydown',
-				retarget(event.target),
+				retarget(eventTargetOf(event)),
 				{
 					key: event.key,
 					code: event.code,
@@ -513,6 +516,64 @@
 		},
 		true,
 	)
+
+	/*
+	 * hover：鼠标在某元素上停留 ≥350ms 且没移出 → 上报一次（带 facts）。
+	 *
+	 * 为什么在页面内做停留判定：mouseover 是高频事件（一次移动几十个），
+	 * 全量回传会把录制通道打爆；而且「停留」本质是计时，必须在页面内用同一个时钟判。
+	 * 意义过滤（aria-haspopup / 后面 2s 内有 click）放在 Node 侧做（合流层，可单测）。
+	 */
+	var HOVER_DWELL_MS = 350
+	var HOVER_REEMIT_MS = 1500
+	var hoverTimer = null
+	var hoverElement = null
+	var hoverStamps = typeof WeakMap === 'function' ? new WeakMap() : null
+
+	function cancelHoverDwell() {
+		if (hoverTimer) {
+			clearTimeout(hoverTimer)
+			hoverTimer = null
+		}
+		hoverElement = null
+	}
+
+	document.addEventListener(
+		'mouseover',
+		function (event) {
+			if (!event.isTrusted) return
+			var el = retarget(eventTargetOf(event))
+			if (!el || el.nodeType !== 1) return
+			if (el === hoverElement) return
+			cancelHoverDwell()
+			hoverElement = el
+			hoverTimer = setTimeout(function () {
+				hoverTimer = null
+				if (hoverElement !== el) return
+				var now = Date.now()
+				var prev = hoverStamps ? hoverStamps.get(el) : undefined
+				if (prev && now - prev < HOVER_REEMIT_MS) return
+				if (hoverStamps) hoverStamps.set(el, now)
+				send('hover', el, { dwellMs: HOVER_DWELL_MS }, true)
+			}, HOVER_DWELL_MS)
+		},
+		true,
+	)
+
+	document.addEventListener(
+		'mouseout',
+		function (event) {
+			if (!event.isTrusted) return
+			// 移到自己的子元素上不算「移出」（鼠标还在这个元素范围内）
+			var to = event.relatedTarget
+			if (hoverElement && to && hoverElement.contains && hoverElement.contains(to)) return
+			cancelHoverDwell()
+		},
+		true,
+	)
+
+	// 按下鼠标说明用户不是在「悬停等待」，取消待发的 hover
+	document.addEventListener('mousedown', cancelHoverDwell, true)
 
 	/* 滚动：页面内先累加，80ms 合并一次，减少回传量 */
 	var scrollState = typeof WeakMap === 'function' ? new WeakMap() : null
@@ -612,6 +673,10 @@
 				tag: el.nodeName.toLowerCase(),
 				role: roleAttr ? String(roleAttr).trim().toLowerCase() : undefined,
 				text: text,
+				// 属性 + 索引链：元素可能在处理到它之前就消失了（悬停展开的菜单、toast），
+				// 有这两样就能直接从快照事实重建 ElementRef，不必再靠 locator 找回元素。
+				attributes: readAttributes(el),
+				nodePath: path,
 				rect: {
 					x: round(rect.left),
 					y: round(rect.top),
@@ -620,7 +685,13 @@
 				},
 			})
 		}
-		return { url: location.href, nodes: nodes }
+		return {
+			url: location.href,
+			nodes: nodes,
+			viewport: { width: window.innerWidth || 0, height: window.innerHeight || 0 },
+			dpr: window.devicePixelRatio || 1,
+			scroll: { x: window.scrollX || 0, y: window.scrollY || 0 },
+		}
 	}
 
 	/** 清掉临时 uid 标记（含 open shadow root 里的） */

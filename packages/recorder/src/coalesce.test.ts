@@ -210,6 +210,113 @@ describe('coalesceEvents —— 点击坐标（closed shadow 兜底）', () => {
 	})
 })
 
+describe('coalesceEvents —— hover（页面已做 350ms 停留判定，这里只做合流）', () => {
+	it('hover 事件成一条 hover 动作（带 facts）', () => {
+		const actions = coalesceEvents([
+			{ kind: 'hover', ts: 1000, facts: facts('menu', 'a'), data: { dwellMs: 350 }, trusted: true },
+		])
+		expect(actions).toHaveLength(1)
+		expect(actions[0]).toMatchObject({ kind: 'hover', ts: 1000 })
+		expect(actions[0]?.facts?.uid).toBe('menu')
+	})
+
+	it('同一元素的连续 hover 只留最后一条', () => {
+		const actions = coalesceEvents([
+			{ kind: 'hover', ts: 1000, facts: facts('menu', 'a'), trusted: true },
+			{ kind: 'hover', ts: 1800, facts: facts('menu', 'a'), trusted: true },
+		])
+		expect(actions).toHaveLength(1)
+		expect(actions[0]?.ts).toBe(1800)
+		expect(actions[0]?.merged).toBe(2)
+	})
+
+	it('不同元素的 hover 各自保留（意义过滤在 plan.ts 做）', () => {
+		const actions = coalesceEvents([
+			{ kind: 'hover', ts: 1000, facts: facts('a', 'a'), trusted: true },
+			{ kind: 'hover', ts: 1100, facts: facts('b', 'a'), trusted: true },
+		])
+		expect(actions.map((action) => action.facts?.uid)).toEqual(['a', 'b'])
+	})
+
+	it('没有 facts 的 hover 直接丢弃', () => {
+		const actions = coalesceEvents([{ kind: 'hover', ts: 1000, trusted: true }])
+		expect(actions).toHaveLength(0)
+	})
+})
+
+describe('coalesceEvents —— 组合键', () => {
+	it('Ctrl+键 → key 动作带 modifiers，且不会被 input 吞掉', () => {
+		const actions = coalesceEvents([
+			{
+				kind: 'keydown',
+				ts: 1000,
+				facts: facts('in', 'input'),
+				data: { key: 's', modifiers: ['Control'], isPrintable: false },
+				trusted: true,
+			},
+		])
+		expect(actions).toHaveLength(1)
+		expect(actions[0]).toMatchObject({ kind: 'key', key: 's', modifiers: ['Control'] })
+	})
+
+	it('Alt+键 / Meta+键 也是组合键', () => {
+		const alt = coalesceEvents([
+			{ kind: 'keydown', ts: 1, facts: facts('x'), data: { key: 'ArrowLeft', modifiers: ['Alt'] }, trusted: true },
+		])
+		expect(alt[0]).toMatchObject({ kind: 'key', modifiers: ['Alt'] })
+		const meta = coalesceEvents([
+			{ kind: 'keydown', ts: 1, facts: facts('x'), data: { key: 'Enter', modifiers: ['Meta'] }, trusted: true },
+		])
+		expect(meta[0]).toMatchObject({ kind: 'key', modifiers: ['Meta'] })
+	})
+
+	it('Shift + 可打印字符只是打大写：不当组合键，交给 input 合并', () => {
+		const actions = coalesceEvents([
+			{
+				kind: 'keydown',
+				ts: 1000,
+				facts: facts('in', 'input'),
+				data: { key: 'A', modifiers: ['Shift'], isPrintable: true },
+				trusted: true,
+			},
+			{ kind: 'input', ts: 1010, facts: facts('in', 'input'), data: { value: 'A' }, trusted: true },
+		])
+		expect(actions.map((action) => action.kind)).toEqual(['input'])
+		expect(actions[0]?.value).toBe('A')
+	})
+
+	it('Shift+Tab 这类不可打印组合键保留 modifiers', () => {
+		const actions = coalesceEvents([
+			{
+				kind: 'keydown',
+				ts: 1000,
+				facts: facts('in', 'input'),
+				data: { key: 'Tab', modifiers: ['Shift'], isPrintable: false },
+				trusted: true,
+			},
+		])
+		expect(actions[0]).toMatchObject({ kind: 'key', key: 'Tab', modifiers: ['Shift'] })
+	})
+
+	it('普通 Enter 不带 modifiers 字段（保持老 flow 形状）', () => {
+		const actions = coalesceEvents([
+			{ kind: 'keydown', ts: 1000, facts: facts('in', 'input'), data: { key: 'Enter' }, trusted: true },
+		])
+		expect(actions[0]).toMatchObject({ kind: 'key', key: 'Enter' })
+		expect(actions[0]?.modifiers).toBeUndefined()
+	})
+})
+
+describe('coalesceEvents —— 标签页归属透传', () => {
+	it('动作带上事件的 pageIndex', () => {
+		const actions = coalesceEvents([
+			{ kind: 'click', ts: 1000, facts: facts('a'), data: { button: 0 }, trusted: true, pageIndex: 1 },
+			{ kind: 'input', ts: 1100, facts: facts('i', 'input'), data: { value: 'x' }, trusted: true, pageIndex: 0 },
+		])
+		expect(actions.map((action) => action.pageIndex)).toEqual([1, 0])
+	})
+})
+
 describe('coalesceEvents —— 滚动', () => {
 	it('同目标连续滚动 delta 累加', () => {
 		const actions = coalesceEvents([scrollEvent(1000, 0, 120), scrollEvent(1200, 0, 80)])

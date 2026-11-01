@@ -43,7 +43,10 @@ export function makeClickStep(id = 'click-submit', ref: ElementRef = makeRef()):
 	}
 }
 
-export function makeFlow(steps: Step[] = [makeClickStep()], overrides: Record<string, unknown> = {}): Flow {
+export function makeFlow(
+	steps: Step[] = [makeClickStep()],
+	overrides: Record<string, unknown> = {},
+): Flow {
 	return parseFlow({
 		schemaVersion: 1,
 		id: 'basic-flow',

@@ -217,6 +217,67 @@ describe('schema: 跨字段契约', () => {
 	})
 })
 
+describe('schema: 多标签页 / 对话框 / 组合键 / 下载', () => {
+	it('key 支持组合键；老 flow 不带 modifiers 也能解析', () => {
+		const withMods = parseFlow(
+			flow({ steps: [{ kind: 'key', id: 'k1', key: 'A', modifiers: ['Control'] }] }),
+		)
+		expect(withMods.steps[0]).toMatchObject({ kind: 'key', modifiers: ['Control'] })
+		const legacy = parseFlow(flow({ steps: [{ kind: 'key', id: 'k2', key: 'Enter' }] }))
+		expect(legacy.steps[0]).toMatchObject({ kind: 'key', key: 'Enter' })
+	})
+
+	it('step 可以声明所属标签页', () => {
+		const parsed = parseFlow(
+			flow({
+				steps: [
+					{ kind: 'navigate', id: 'n1', url: 'https://a.test/' },
+					{
+						kind: 'click',
+						id: 'c1',
+						target: ref(),
+						button: 'left',
+						clickCount: 1,
+						modifiers: [],
+						page: { index: 1 },
+					},
+					{ kind: 'switchTab', id: 't1', index: 0 },
+				],
+			}),
+		)
+		expect(parsed.steps[1]).toMatchObject({ page: { index: 1 } })
+		expect(parsed.steps[2]).toMatchObject({ kind: 'switchTab', index: 0 })
+	})
+
+	it('dialog 步骤与 download 期望可解析', () => {
+		const parsed = parseFlow(
+			flow({
+				steps: [
+					{ kind: 'dialog', id: 'd1', action: 'accept' },
+					{ kind: 'dialog', id: 'd2', action: 'dismiss', promptText: '确认删除?' },
+					{
+						kind: 'click',
+						id: 'c1',
+						target: ref(),
+						button: 'left',
+						clickCount: 1,
+						modifiers: [],
+						expect: { kind: 'download', filenamePattern: '\\.csv$' },
+					},
+				],
+			}),
+		)
+		expect(parsed.steps).toHaveLength(3)
+	})
+
+	it('upload 步骤的文件路径支持 {{变量}}（执行时会渲染）', () => {
+		const parsed = parseFlow(
+			flow({ steps: [{ kind: 'upload', id: 'u1', target: ref(), files: ['{{file}}'] }] }),
+		)
+		expect(parsed.steps[0]).toMatchObject({ kind: 'upload', files: ['{{file}}'] })
+	})
+})
+
 describe('schema: 模板', () => {
 	it('提取模板变量', () => {
 		expect(parseTemplate('hello {{name}} {{ age }}')).toEqual(['name', 'age'])

@@ -20,6 +20,47 @@ export function sanitizeSegment(value: string): string {
 	return cleaned.length > 0 ? cleaned : 'unnamed'
 }
 
+/**
+ * 下载文件名清洗：去掉目录分隔符与路径穿越，保留可读原名。
+ * 浏览器给的 `suggestedFilename()` 可能来自站点响应头（不可信），必须过一遍。
+ */
+export function sanitizeDownloadName(name: string): string {
+	const base =
+		name
+			.replace(/\\/g, '/')
+			.split('/')
+			.pop() ?? ''
+	// 逐字符清洗：控制字符与 Windows 非法字符换成 _（不用正则，避免 no-control-regex）
+	const cleaned = Array.from(base)
+		.map((ch) => {
+			const code = ch.codePointAt(0) ?? 0
+			if (code < 0x20 || code === 0x7f) return '_'
+			return '<>:"|?*'.includes(ch) ? '_' : ch
+		})
+		.join('')
+		.replace(/^\.+/, '_')
+		.trim()
+	if (cleaned === '') return 'download.bin'
+	return cleaned.slice(0, 120)
+}
+
+/**
+ * 同名下载去重：`a.txt` 已存在 → `a-1.txt` → `a-2.txt`。
+ * 纯函数（传入已用名字集合），便于单测；扩展名保留在末尾便于业务人员辨认。
+ */
+export function uniqueDownloadFilename(name: string, used: ReadonlySet<string>): string {
+	const sanitized = sanitizeDownloadName(name)
+	if (!used.has(sanitized)) return sanitized
+	const dot = sanitized.lastIndexOf('.')
+	const stem = dot > 0 ? sanitized.slice(0, dot) : sanitized
+	const ext = dot > 0 ? sanitized.slice(dot) : ''
+	for (let index = 1; index < 10_000; index++) {
+		const candidate = `${stem}-${index}${ext}`
+		if (!used.has(candidate)) return candidate
+	}
+	return `${stem}-${Date.now()}${ext}`
+}
+
 export interface StepArtifactPayload {
 	before?: Buffer
 	after?: Buffer
@@ -72,9 +113,37 @@ export class ArtifactWriter {
 		if (payload.before) await writeFile(join(stepDir, 'before.png'), payload.before)
 		if (payload.after) await writeFile(join(stepDir, 'after.png'), payload.after)
 		if (payload.element) await writeFile(join(stepDir, 'element.png'), payload.element)
-		await writeFile(join(stepDir, 'snapshot.json'), `${JSON.stringify(payload.snapshot, null, 2)}\n`, 'utf8')
+		await writeFile(
+			join(stepDir, 'snapshot.json'),
+			`${JSON.stringify(payload.snapshot, null, 2)}\n`,
+			'utf8',
+		)
 		await writeFile(join(stepDir, 'log.txt'), `${payload.log.join('\n')}\n`, 'utf8')
 		return stepDir
+	}
+
+	/** 下载目录：`artifacts/<flowId>/runs/<runId>/downloads/` */
+	get downloadsDir(): string {
+		return join(this.runDir, 'downloads')
+	}
+
+	/**
+	 * 把一个下载落到 `downloads/<filename>`，由调用方提供真正的保存动作
+	 * （Playwright 的 `download.saveAs(path)`，或测试里写个假文件）。
+	 */
+	async writeDownload(
+		filename: string,
+		writer: (absPath: string) => Promise<void>,
+	): Promise<string> {
+		const safe = sanitizeDownloadName(filename)
+		const abs = resolve(this.downloadsDir, safe)
+		const rel = relative(this.downloadsDir, abs)
+		if (rel.startsWith('..') || isAbsolute(rel)) {
+			throw new Error(`下载路径越界：${filename}`)
+		}
+		await mkdir(this.downloadsDir, { recursive: true })
+		await writer(abs)
+		return abs
 	}
 
 	async writeResult(report: unknown): Promise<string> {

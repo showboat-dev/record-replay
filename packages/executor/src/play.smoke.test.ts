@@ -131,7 +131,9 @@ async function computeClosedShadowOffset(target: string): Promise<{ x: number; y
 		const hostBox = (await cdp.send('DOM.getBoxModel', { backendNodeId: host.backendNodeId })) as {
 			model: { padding: number[] }
 		}
-		const innerBox = (await cdp.send('DOM.getBoxModel', { backendNodeId: inner.backendNodeId })) as {
+		const innerBox = (await cdp.send('DOM.getBoxModel', {
+			backendNodeId: inner.backendNodeId,
+		})) as {
 			model: { content: number[] }
 		}
 		// quad = [x1,y1, x2,y1, x2,y2, x1,y2]；host padding quad 的 [0],[1] 即 padding box 原点
@@ -165,9 +167,7 @@ function makeRef(spec: RefSpec): ElementRef {
 	const fingerprint = {
 		tag: spec.tag,
 		...(spec.fingerprint.role ? { role: spec.fingerprint.role } : {}),
-		...(spec.fingerprint.accessibleName
-			? { accessibleName: spec.fingerprint.accessibleName }
-			: {}),
+		...(spec.fingerprint.accessibleName ? { accessibleName: spec.fingerprint.accessibleName } : {}),
 		attrs: fingerprintAttrs,
 		stableHash: computeStableHash({
 			tag: spec.tag,
@@ -367,7 +367,8 @@ describe.skipIf(!ENABLED)('冒烟: 真实 Chromium 回放', () => {
 				modifiers: [],
 			},
 		])
-		const result = await playFlow({ flow, artifactsRoot, headless: true })
+		// 元素确实不存在：把"等元素出现"的预算调小，测试不必真的等 5s
+		const result = await playFlow({ flow, artifactsRoot, headless: true, elementWaitMs: 800 })
 		expect(result.ok).toBe(false)
 		expect(result.steps[1]?.error?.code).toBe('ELEMENT_NOT_FOUND')
 
@@ -395,7 +396,14 @@ describe.skipIf(!ENABLED)('冒烟: 真实 Chromium 回放', () => {
 		})
 		const flow = buildFlow([
 			{ id: 'nav', kind: 'navigate', url: `${site}/noop` },
-			{ id: 'click-noop', kind: 'click', target: noop, button: 'left', clickCount: 1, modifiers: [] },
+			{
+				id: 'click-noop',
+				kind: 'click',
+				target: noop,
+				button: 'left',
+				clickCount: 1,
+				modifiers: [],
+			},
 		])
 		const result = await playFlow({ flow, artifactsRoot, headless: true })
 		expect(result.ok).toBe(false)
@@ -515,6 +523,7 @@ describe.skipIf(!ENABLED)('冒烟: 真实 Chromium 回放', () => {
 			flow,
 			artifactsRoot,
 			headless: true,
+			elementWaitMs: 800,
 			ai: {
 				locate: async () => {
 					aiCalls += 1
@@ -635,7 +644,11 @@ describe.skipIf(!ENABLED)('冒烟: 回放 recorder 真实产出', () => {
 
 describe.skipIf(!ENABLED)('冒烟: recorder 真实产出的难点场景', () => {
 	it('/iframe-same 录制 flow：frameElement + urlPattern 两级 frame 链能进入并操作', async () => {
-		const flowPath = await findRecordedFlow('local-iframe-same.json', 'smoke-iframe.json', 'local-iframe.json')
+		const flowPath = await findRecordedFlow(
+			'local-iframe-same.json',
+			'smoke-iframe.json',
+			'local-iframe.json',
+		)
 		if (!flowPath) {
 			console.log('[smoke] 未找到 recorder 产出的 iframe flow，跳过')
 			return
@@ -643,14 +656,19 @@ describe.skipIf(!ENABLED)('冒烟: recorder 真实产出的难点场景', () => 
 		const { loadFlow } = await import('@rr/schema')
 		const flow = await loadFlow(flowPath)
 		const result = await playFlow({ flow, artifactsRoot, headless: true, baseUrl: site })
-		if (!result.ok) throw new Error(`iframe flow 回放失败：${JSON.stringify(result.steps, null, 2)}`)
+		if (!result.ok)
+			throw new Error(`iframe flow 回放失败：${JSON.stringify(result.steps, null, 2)}`)
 		console.log(
 			`[smoke] iframe flow 回放通过；levels=${JSON.stringify(result.steps.map((s) => s.level ?? '-'))}`,
 		)
 	}, 120_000)
 
 	it('/shadow-closed 录制 flow：closed shadow 用 recorder 记的 position 点中内层按钮', async () => {
-		const flowPath = await findRecordedFlow('local-shadow-closed.json', 'smoke-shadow.json', 'local-shadow.json')
+		const flowPath = await findRecordedFlow(
+			'local-shadow-closed.json',
+			'smoke-shadow.json',
+			'local-shadow.json',
+		)
 		if (!flowPath) {
 			console.log('[smoke] 未找到 recorder 产出的 shadow flow，跳过')
 			return
@@ -658,7 +676,8 @@ describe.skipIf(!ENABLED)('冒烟: recorder 真实产出的难点场景', () => 
 		const { loadFlow } = await import('@rr/schema')
 		const flow = await loadFlow(flowPath)
 		const result = await playFlow({ flow, artifactsRoot, headless: true, baseUrl: site })
-		if (!result.ok) throw new Error(`shadow flow 回放失败：${JSON.stringify(result.steps, null, 2)}`)
+		if (!result.ok)
+			throw new Error(`shadow flow 回放失败：${JSON.stringify(result.steps, null, 2)}`)
 		console.log(
 			`[smoke] shadow flow 回放通过；levels=${JSON.stringify(result.steps.map((s) => s.level ?? '-'))}`,
 		)

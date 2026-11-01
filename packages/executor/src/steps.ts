@@ -51,6 +51,15 @@ export function mapSteps(
 	})
 }
 
+/** flow 里是否出现某种 step（用于提前决定策略，例如有没有 dialog 步骤 → 对话框手动模式） */
+export function hasStepKind(steps: Step[], kind: Step['kind']): boolean {
+	for (const step of steps) {
+		if (step.kind === kind) return true
+		if (step.kind === 'group' && hasStepKind(step.steps, kind)) return true
+	}
+	return false
+}
+
 /** 按 stepId 找到 step（找不到返回 undefined） */
 export function findStep(steps: Step[], stepId: string, prefix = ''): Step | undefined {
 	for (const step of steps) {

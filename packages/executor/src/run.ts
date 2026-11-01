@@ -19,7 +19,10 @@ import {
 	type ElementFacts,
 	type HealInput,
 } from './selfheal.js'
-import { flattenSteps } from './steps.js'
+import { DialogManager, type DialogMode } from './dialogs.js'
+import { DownloadManager } from './downloads.js'
+import { flattenSteps, hasStepKind } from './steps.js'
+import { PageManager, resolveStepPageIndex } from './tabs.js'
 import { defaultVariables, renderStep } from './template.js'
 import { NAME_KEEPALIVE_SOURCE, rebaseUrl } from './url.js'
 import { runAssertion, sleep, verifyExpect, type VerifyDeps } from './verify.js'
@@ -129,6 +132,19 @@ async function activeElementSig(page: Page): Promise<string> {
 		.catch(() => '')
 }
 
+function dialogManagerHistoryChanged(before: number, after: number): boolean {
+	return after > before
+}
+
+/**
+ * 给"可能被原生对话框阻塞"的页面操作加超时上限。
+ * 页面 JS 被 alert/confirm 阻塞时，`evaluate`/`screenshot` 会一直等到 Playwright 超时，
+ * 让整个 run 看起来像卡死；这里用 race 兜住，超时返回 fallback 由调用方决定怎么处理。
+ */
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+	return Promise.race([promise, sleep(ms).then(() => fallback)])
+}
+
 async function readMutationCount(page: Page): Promise<number> {
 	return page
 		.evaluate(() => {
@@ -174,7 +190,6 @@ export async function executeRun(
 	const flow: Flow = opts.flow
 	const timeoutMs = opts.timeoutMs ?? 15_000
 	const screenshotMode = opts.screenshotMode ?? 'failures'
-	const dialogPolicy = opts.dialogPolicy ?? 'dismiss'
 	const artifacts = new ArtifactWriter(opts.artifactsRoot ?? './artifacts', flow.id, runId)
 	const startedAt = new Date().toISOString()
 	const runStart = Date.now()
@@ -187,7 +202,6 @@ export async function executeRun(
 	const steps: StepResult[] = []
 	const details: StepDetail[] = []
 	const heals: HealInput[] = []
-	const dialogs: string[] = []
 	const log = (msg: string): void => {
 		opts.onLog?.(msg)
 	}
@@ -197,6 +211,27 @@ export async function executeRun(
 		logLines.push(msg)
 		log(`[${flow.id}] ${msg}`)
 	}
+
+	// ---- 对话框策略：flow 里有 dialog 步骤 → 手动模式（只暂存，等 dialog 步骤处理） ----
+	// 否则按 dialogPolicy：dismiss=auto（出现即关）、fail（出现即失败）
+	const manualDialogs = hasStepKind(flow.steps, 'dialog')
+	const dialogMode: DialogMode = manualDialogs
+		? 'manual'
+		: opts.dialogPolicy === 'fail'
+			? 'fail'
+			: 'auto'
+	const dialogManager = new DialogManager(dialogMode, pushLog)
+	if (manualDialogs) pushLog('flow 含 dialog 步骤 → 原生对话框改为手动处理模式')
+	else if (dialogMode === 'fail') pushLog('dialogPolicy=fail：出现原生对话框即判该步失败')
+
+	// ---- 下载 / 当前 step 归因 ----
+	const stepIndexRef = { current: -1 }
+	const downloads = new DownloadManager(artifacts, pushLog, {
+		stepIndex: () => stepIndexRef.current,
+	})
+	// expect.download 只看"这一步开始之后"的下载
+	const downloadCursor = { current: 0 }
+	let observedPageCount = 1
 
 	const browser = await chromium.launch({ headless: opts.headless ?? true })
 	let browserCrashed = false
@@ -213,21 +248,26 @@ export async function executeRun(
 		// keepNames 垫片：resolver/executor 里有函数被 page.evaluate 序列化进页面，
 		// esbuild/tsx 注入的 __name(...) 在页面里不存在会导致 ReferenceError（真实站点 L2 挂掉的根因）
 		await context.addInitScript({ content: NAME_KEEPALIVE_SOURCE })
-		const page = await context.newPage()
-		page.setDefaultTimeout(timeoutMs)
+		await context.newPage()
+		// 多标签页：index 0 = 起点页，之后按创建顺序追加（与录制端一致）
+		const pages = new PageManager(context, pushLog)
+		let page: Page = pages.current()
 
-		page.on('dialog', (dialog) => {
-			const info = `${dialog.type()}: ${dialog.message()}`
-			dialogs.push(info)
-			pushLog(`检测到 JS 对话框（${dialogPolicy}）：${info}`)
-			void dialog.dismiss().catch(() => {
-				/* 页面可能已关闭 */
+		// 每个页都要：默认超时 / 对话框 handler / 崩溃监听（新标签页同样生效）
+		const wirePage = (target: Page): void => {
+			target.setDefaultTimeout(timeoutMs)
+			target.on('dialog', (dialog) => dialogManager.handle(target, dialog))
+			target.on('crash', () => {
+				browserCrashed = true
+				const index = pages.slots.find((slot) => slot.page === target)?.index ?? '?'
+				pushLog(`页面崩溃（page.on("crash")，标签页 ${index}）`)
 			})
-		})
-		page.on('crash', () => {
-			browserCrashed = true
-			pushLog('页面崩溃（page.on("crash")）')
-		})
+		}
+		for (const slot of pages.slots) wirePage(slot.page)
+		context.on('page', wirePage)
+		// 下载事件挂在 context 上：任何标签页触发的下载都能收到
+		downloads.attach(context)
+		pushLog(`起始标签页 ${pages.currentIndex}；对话框模式=${dialogMode}`)
 
 		// ---- AI 修复适配器（默认关闭；opts.ai 为 null/undefined 时完全不注入） ----
 		//
@@ -319,6 +359,8 @@ export async function executeRun(
 					allowAi: allowAi && !closedShadow,
 					// iframe 的 urlPattern 段也要按回放环境重定基（录制 5199 / 回放 5173）
 					...(opts.baseUrl !== undefined ? { baseUrl: opts.baseUrl } : {}),
+					// 元素出现等待预算（默认交给 resolver 的 5000ms）
+					...(opts.elementWaitMs !== undefined ? { elementWaitMs: opts.elementWaitMs } : {}),
 				},
 			})
 			// 给业务人员看：动作前高亮目标 + 停顿（只在非 headless 时由调用方开启）
@@ -330,25 +372,35 @@ export async function executeRun(
 			return result
 		}
 
+		// page 用 getter：切标签页后 action/verify 自动作用在当前页上
 		const actionDeps: ActionDeps = {
-			page,
+			get page() {
+				return page
+			},
 			timeoutMs,
 			log: pushLog,
 			resolveTarget: (target, o) =>
 				resolveTarget(target, { ...o, flash: opts.highlightSteps === true }),
 			vars,
+			// 点击可能触发原生对话框（manual 模式）：允许 click 在对话框出现时提前结束等待
+			dialogPending: () => dialogMode === 'manual' && dialogManager.pendingCount > 0,
 		}
 		const verifyDeps: VerifyDeps = {
-			page,
+			get page() {
+				return page
+			},
 			timeoutMs,
 			log: pushLog,
 			// expect 不带 AI：避免一步之内多次调用 AI，也避免校验被"修"成通过
 			resolveTarget: (target, o) => resolveTarget(target, { ...o, allowAi: false }),
+			// expect.download 的数据源：只看本步开始之后发生的下载
+			recentDownloads: () => downloads.since(downloadCursor.current),
 		}
 
 		const flat = flattenSteps(flow.steps)
 
 		// flow 第一步不是 navigate 时，先按 env.startUrl 打开页面（同样吃 baseUrl 重定基）
+		const startPage = pages.pageAt(0)
 		if (flat.length === 0 || flat[0]?.step.kind !== 'navigate') {
 			const startUrl = rebaseUrl(env.startUrl, opts.baseUrl)
 			try {
@@ -358,7 +410,7 @@ export async function executeRun(
 				let opened = false
 				for (let attempt = 1; attempt <= 2 && !opened; attempt++) {
 					try {
-						await page.goto(startUrl, { timeout: timeoutMs, waitUntil: 'load' })
+						await startPage.goto(startUrl, { timeout: timeoutMs, waitUntil: 'load' })
 						opened = true
 					} catch (err) {
 						lastErr = err
@@ -425,45 +477,111 @@ export async function executeRun(
 			let beforeShot: Buffer | undefined
 			let expectNote: string | undefined
 
-			// before.png 在内存里留着：失败时落盘，click/drag 的 NO_EFFECT 探测也用它
-			if (screenshotMode !== 'off' && item.step.kind !== 'navigate') {
-				beforeShot = await page.screenshot({ type: 'png' }).catch(() => undefined)
-			}
-
 			try {
-				const urlBefore = page.url()
-				const dialogCountBefore = dialogs.length
-				const focusBefore = await activeElementSig(page)
+				stepIndexRef.current = item.index
 
-				if (item.step.kind === 'assert') {
+				// ---- 目标标签页：step.page 优先；switchTab 用自己的 index；都没写则沿用当前 ----
+				const desiredPageIndex = resolveStepPageIndex(item.step, pages.currentIndex)
+				if (desiredPageIndex !== pages.currentIndex) {
+					phase = 'action'
+					page = (await pages.focus(desiredPageIndex, timeoutMs)).page
+					stepLogPush(`切到标签页 ${desiredPageIndex}：${page.url()}`)
+				} else {
+					// 当前页可能已被关掉：PageManager 内部会回退到还活着的页并记日志
+					page = pages.current()
+				}
+				detail.pageIndex = pages.currentIndex
+
+				// manual 模式下上一步弹出的对话框必须由 dialog 步骤处理，否则页面被阻塞
+				if (
+					dialogMode === 'manual' &&
+					dialogManager.pendingCount > 0 &&
+					item.step.kind !== 'dialog'
+				) {
+					const pending = dialogManager.pendingList()[0]
+					throw new StepFailure(
+						'DIALOG_UNEXPECTED',
+						`上一步弹出了原生对话框，但下一步不是 dialog 步骤（页面被阻塞）：${pending?.info ?? 'unknown'}`,
+					)
+				}
+				const earlyDialogFailure = dialogManager.takeFailure()
+				if (earlyDialogFailure) {
+					throw new StepFailure(
+						'DIALOG_UNEXPECTED',
+						`dialogPolicy=fail：页面弹出了原生对话框（${earlyDialogFailure}）`,
+					)
+				}
+
+				// 原生对话框处于"待处理"时页面 JS 是**阻塞**的：
+				// 此时任何 page.evaluate / screenshot 都会挂到超时（曾经导致 play 卡死）。
+				// 所以 dialog 步骤（以及紧随其后的步骤）只做"不碰页面"的动作。
+				const dialogBlocking = dialogManager.pendingCount > 0
+
+				// before.png 在内存里留着：失败时落盘，click/drag 的 NO_EFFECT 探测也用它
+				if (!dialogBlocking && screenshotMode !== 'off' && item.step.kind !== 'navigate') {
+					beforeShot = await page.screenshot({ type: 'png' }).catch(() => undefined)
+				}
+
+				const urlBefore = page.url()
+				const dialogCountBefore = dialogManager.history.length
+				const downloadsBefore = downloads.count
+				const pagesBefore = pages.count
+				const focusBefore = dialogBlocking ? '' : await activeElementSig(page)
+				// 这一步"新发生"的下载从当前游标算起（避免上一步的下载冒充本步的）
+				downloadCursor.current = downloads.cursor
+
+				// ---- 模板渲染（navigate.url / upload.files / dialog.promptText …）----
+				phase = 'template'
+				const rendered = (() => {
+					const base = renderStep(item.step, vars)
+					// baseUrl：只换 origin，保留 path/query/hash（回放环境切换）
+					if (base.kind === 'navigate') {
+						const rebased = rebaseUrl(base.url, opts.baseUrl)
+						if (rebased !== base.url) stepLogPush(`navigate 重定基：${base.url} → ${rebased}`)
+						return { ...base, url: rebased }
+					}
+					return base
+				})()
+				if (rendered.kind === 'group') {
+					throw new StepFailure('NOT_ACTIONABLE', 'group 步骤不应直接执行（应由 flatten 展开）')
+				}
+
+				// ---- 按类型执行 ----
+				if (rendered.kind === 'switchTab') {
+					phase = 'action'
+					// 切页在目标标签页选择阶段已完成（step.page 与 switchTab.index 冲突时以 step.page 为准）
+					stepLogPush(`switchTab ✓ 当前标签页 ${pages.currentIndex}（${page.url()}）`)
+				} else if (rendered.kind === 'dialog') {
+					phase = 'action'
+					// 对话框可能挂在"别的标签页"上（弹窗由那个页触发）：先切到它
+					const pendingDialog = dialogManager.pendingList()[0]
+					if (pendingDialog?.page) {
+						const dialogPageIndex = pages.slots.find(
+							(slot) => slot.page === pendingDialog.page,
+						)?.index
+						if (dialogPageIndex !== undefined && dialogPageIndex !== pages.currentIndex) {
+							page = (await pages.focus(dialogPageIndex, timeoutMs)).page
+							detail.pageIndex = dialogPageIndex
+							stepLogPush(`对话框在标签页 ${dialogPageIndex}，已切过去处理`)
+						}
+					}
+					const handled = await dialogManager.resolve(
+						rendered.action,
+						rendered.promptText,
+						timeoutMs,
+					)
+					stepLogPush(`dialog ${rendered.action} ✓ ${handled.info}`)
+				} else if (rendered.kind === 'assert') {
 					phase = 'expect'
-					const rendered = renderStep(item.step, vars) as Extract<
-						typeof item.step,
-						{ kind: 'assert' }
-					>
 					stepLogPush(`assert ${rendered.assertion.kind}`)
 					const note = await runAssertion(verifyDeps, rendered.assertion, rendered.target)
 					expectNote = `assert ${note}`
 					stepLogPush(`assert ✓ ${note}`)
 				} else {
-					const rendered = (() => {
-						phase = 'template'
-						const base = renderStep(item.step, vars)
-						// baseUrl：只换 origin，保留 path/query/hash（回放环境切换）
-						if (base.kind === 'navigate') {
-							const rebased = rebaseUrl(base.url, opts.baseUrl)
-							if (rebased !== base.url) stepLogPush(`navigate 重定基：${base.url} → ${rebased}`)
-							return { ...base, url: rebased }
-						}
-						return base
-					})()
-					if (rendered.kind === 'group') {
-						throw new StepFailure('NOT_ACTIONABLE', 'group 步骤不应直接执行（应由 flatten 展开）')
-					}
 					phase = rendered.kind === 'navigate' ? 'navigate' : 'action'
 					const probeNeeded =
 						!rendered.expect && (rendered.kind === 'click' || rendered.kind === 'drag')
-					if (probeNeeded) await armMutationProbe(page)
+					if (probeNeeded && !dialogBlocking) await armMutationProbe(page)
 
 					const action = await runAction(actionDeps, rendered)
 					if (action.level !== undefined) detail.level = action.level
@@ -478,7 +596,9 @@ export async function executeRun(
 						const usedValues =
 							'target' in rendered && rendered.target
 								? rendered.target.candidates.map((c) =>
-										typeof c.value === 'string' ? c.value : `${c.value.role}:${c.value.name ?? ''}`,
+										typeof c.value === 'string'
+											? c.value
+											: `${c.value.role}:${c.value.name ?? ''}`,
 									)
 								: []
 						const candidate = pickCandidateFromFacts(pendingRepair.facts, usedValues)
@@ -502,23 +622,41 @@ export async function executeRun(
 						pendingRepairRef.current = null
 					}
 
-					if (rendered.expect) {
-						phase = 'expect'
-						expectNote = await verifyExpect(verifyDeps, rendered.expect)
-					} else if (probeNeeded) {
+					// 动作执行期间弹了对话框（fail 策略）→ 本步失败，归因到当前步骤
+					const lateDialogFailure = dialogManager.takeFailure()
+					if (lateDialogFailure) {
+						throw new StepFailure(
+							'DIALOG_UNEXPECTED',
+							`dialogPolicy=fail：动作触发了原生对话框（${lateDialogFailure}）`,
+						)
+					}
+
+					if (probeNeeded && !dialogBlocking) {
 						phase = 'action'
 						await assertEffect(
 							page,
 							urlBefore,
 							dialogCountBefore,
-							dialogs.length,
+							dialogManager.history.length,
 							beforeShot,
 							screenshotMode,
 							focusBefore,
+							downloadsBefore,
+							downloads.count,
+							pagesBefore,
+							pages.count,
+							dialogMode,
 							stepLogPush,
 						)
 					}
 				}
+
+				// ---- expect 校验（所有 step 类型通用）----
+				if (rendered.expect) {
+					phase = 'expect'
+					expectNote = await verifyExpect(verifyDeps, rendered.expect)
+				}
+
 				detail.status = 'pass'
 				if (expectNote !== undefined) stepLogPush(`expect ✓ ${expectNote}`)
 			} catch (err) {
@@ -530,11 +668,14 @@ export async function executeRun(
 				// 失败必须落 artifact：before/after 截图 + snapshot.json + log.txt
 				let stepDir: string | undefined
 				try {
+					const dialogBlocked = dialogManager.pendingCount > 0
 					const afterShot =
-						screenshotMode === 'off'
+						screenshotMode === 'off' || dialogBlocked
 							? undefined
 							: await page.screenshot({ type: 'png' }).catch(() => undefined)
-					const snapshot = await captureSnapshot(page)
+					const snapshot = dialogBlocked
+						? { skipped: '原生对话框挂起，页面 JS 阻塞，跳过页面快照' }
+						: await captureSnapshot(page)
 					stepDir = await artifacts.writeStepArtifacts(item.index, {
 						...(beforeShot ? { before: beforeShot } : {}),
 						...(afterShot ? { after: afterShot } : {}),
@@ -544,6 +685,7 @@ export async function executeRun(
 							error: classified,
 							phase,
 							url: page.url(),
+							pageIndex: pages.currentIndex,
 							page: snapshot,
 						},
 						log: stepLog,
@@ -554,7 +696,8 @@ export async function executeRun(
 				}
 			}
 
-			if (detail.status === 'pass' && screenshotMode === 'all') {
+
+			if (detail.status === 'pass' && screenshotMode === 'all' && dialogManager.pendingCount === 0) {
 				try {
 					const afterShot = await page.screenshot({ type: 'png' }).catch(() => undefined)
 					detail.artifactDir = await artifacts.writeStepArtifacts(item.index, {
@@ -581,7 +724,12 @@ export async function executeRun(
 			details.push(detail)
 			opts.onStep?.(stepResult)
 		}
+		observedPageCount = pages.count
 	} finally {
+		// 残留对话框必须关掉，否则 browser.close() 可能卡住
+		await dialogManager.dismissRemaining().catch(() => 0)
+		// 等下载保存落盘（result.json 里要写文件名列表）
+		await downloads.flush().catch(() => undefined)
 		// 给业务人员留时间看结果：headed 模式下成功停留 keepOpenMs，失败停留更久
 		if (!(opts.headless ?? true)) {
 			const hasFailure = steps.some((s) => s.status === 'fail')
@@ -623,7 +771,9 @@ export async function executeRun(
 		artifactsDir: artifacts.runDir,
 		startedAt,
 		finishedAt: new Date().toISOString(),
-		dialogs,
+		dialogs: dialogManager.history,
+		downloads: downloads.list().map((record) => record.filename),
+		pages: observedPageCount,
 		stepsDetail: details,
 	}
 
@@ -652,9 +802,42 @@ async function assertEffect(
 	beforeShot: Buffer | undefined,
 	screenshotMode: string,
 	focusBefore: string,
+	downloadsBefore: number,
+	downloadsAfter: number,
+	pagesBefore: number,
+	pagesAfter: number,
+	dialogMode: DialogMode,
 	pushLog: (msg: string) => void,
 ): Promise<void> {
-	const mutations = await readMutationCount(page)
+	// manual 模式下对话框会让页面 JS 阻塞：先给 dialog 事件一点时间到达，
+	// 否则下面的 evaluate 会一直挂到超时。
+	if (dialogMode === 'manual') {
+		await sleep(80)
+		if (dialogManagerHistoryChanged(dialogsBefore, dialogsAfter)) {
+			pushLog('effect: 弹出 JS 对话框（manual 模式，等待 dialog 步骤处理）')
+			return
+		}
+	}
+
+	// 触发下载 / 新开标签页也是货真价实的副作用（这两类页面本身可能一点 DOM 都不变）
+	if (downloadsAfter > downloadsBefore) {
+		pushLog(`effect: 触发下载 ${downloadsAfter - downloadsBefore} 个`)
+		return
+	}
+	if (pagesAfter > pagesBefore) {
+		pushLog(`effect: 新开标签页 ${pagesAfter - pagesBefore} 个`)
+		return
+	}
+	if (dialogManagerHistoryChanged(dialogsBefore, dialogsAfter)) {
+		pushLog('effect: 弹出 JS 对话框')
+		return
+	}
+
+	const mutations = await withTimeout(readMutationCount(page), 1_500, -1)
+	if (mutations < 0) {
+		pushLog('effect: 页面无响应（可能被对话框阻塞），跳过 NO_EFFECT 判定')
+		return
+	}
 	if (mutations > 0) {
 		pushLog(`effect: DOM 变更 ${mutations} 处`)
 		return
@@ -663,14 +846,9 @@ async function assertEffect(
 		pushLog(`effect: url 变化 → ${page.url()}`)
 		return
 	}
-	if (dialogsAfter > dialogsBefore) {
-		pushLog('effect: 弹出 JS 对话框')
-		return
-	}
-
 	// 焦点落到被点元素上会触发 focus ring 重绘：这不算"页面有副作用"。
 	// （否则所有可聚焦按钮都会被误判成 NO_EFFECT）
-	const focusAfter = await activeElementSig(page)
+	const focusAfter = await withTimeout(activeElementSig(page), 800, focusBefore)
 	if (focusAfter !== focusBefore) {
 		pushLog(`effect: 焦点变化（${focusBefore || 'none'} → ${focusAfter || 'none'}，仅 UI 反馈）`)
 		return
@@ -678,14 +856,22 @@ async function assertEffect(
 
 	// 给异步渲染留一点时间再判一次
 	await sleep(250)
-	const mutationsLate = await readMutationCount(page)
+	const mutationsLate = await withTimeout(readMutationCount(page), 1_500, -1)
+	if (mutationsLate < 0) {
+		pushLog('effect: 页面无响应，跳过 NO_EFFECT 判定')
+		return
+	}
 	if (mutationsLate > 0 || page.url() !== urlBefore) {
 		pushLog(`effect: 延迟确认到变化（mutation=${mutationsLate}）`)
 		return
 	}
 
 	if (beforeShot && screenshotMode !== 'off') {
-		const afterShot = await page.screenshot({ type: 'png' }).catch(() => undefined)
+		const afterShot = await withTimeout(
+			page.screenshot({ type: 'png' }).catch(() => undefined),
+			3_000,
+			undefined,
+		)
 		if (afterShot && afterShot.equals(beforeShot)) {
 			throw new StepFailure(
 				'NO_EFFECT',

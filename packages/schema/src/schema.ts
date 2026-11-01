@@ -114,12 +114,14 @@ export const ExpectSchema = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal('elementHidden'), target: ElementRefSchema }),
 	z.object({ kind: z.literal('textChange'), target: ElementRefSchema, to: z.string() }),
 	z.object({ kind: z.literal('domSignature'), hash: z.string(), region: z.string().optional() }),
+	/** 这一步应该触发一个文件下载（文件名可选匹配） */
+	z.object({ kind: z.literal('download'), filenamePattern: z.string().optional() }),
 ])
 export type Expect = z.infer<typeof ExpectSchema>
 
 export const VariableSchema = z.object({
 	name: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, '变量名必须是合法标识符'),
-	type: z.enum(['string', 'secret']).default('string'),
+	type: z.enum(['string', 'secret', 'file']).default('string'),
 	defaultValue: z.string().optional(),
 	/** secret 变量不会出现在 trace 明文里；UI 只显示 ****** */
 	secret: z.boolean().default(false),
@@ -138,6 +140,11 @@ const BaseStepSchema = z.object({
 	label: z.string().optional(),
 	timeout: z.number().int().positive().optional(),
 	expect: ExpectSchema.optional(),
+	/**
+	 * 这一步发生在哪个标签页（0 = 录制起点页面，1 = 第一个新开的标签页…）。
+	 * 不填 = 沿用上一步的标签页。多标签页流程（如"从 A 系统复制到 B 系统"）靠它表达。
+	 */
+	page: z.object({ index: z.number().int().min(0) }).optional(),
 })
 
 const navigateStep = BaseStepSchema.extend({
@@ -171,6 +178,8 @@ const selectStep = BaseStepSchema.extend({
 const keyStep = BaseStepSchema.extend({
 	kind: z.literal('key'),
 	key: z.string().min(1),
+	/** 组合键：['Control','Shift'] + key='A' → Ctrl+Shift+A */
+	modifiers: z.array(z.enum(['Alt', 'Control', 'Meta', 'Shift'])).optional(),
 	target: ElementRefSchema.optional(),
 })
 
@@ -237,6 +246,19 @@ const scriptStep = BaseStepSchema.extend({
 	code: z.string().min(1),
 })
 
+/** 原生对话框（alert/confirm/prompt）：录制时用户点的是浏览器按钮，回放时必须显式确认一次 */
+const dialogStep = BaseStepSchema.extend({
+	kind: z.literal('dialog'),
+	action: z.enum(['accept', 'dismiss']),
+	promptText: z.string().optional(),
+})
+
+/** 显式切换标签页（点标签栏本身不会被页面 JS 捕获，录制器会合成这一步） */
+const switchTabStep = BaseStepSchema.extend({
+	kind: z.literal('switchTab'),
+	index: z.number().int().min(0),
+})
+
 export type Step =
 	| z.infer<typeof navigateStep>
 	| z.infer<typeof clickStep>
@@ -251,6 +273,8 @@ export type Step =
 	| z.infer<typeof assertStep>
 	| z.infer<typeof extractStep>
 	| z.infer<typeof scriptStep>
+	| z.infer<typeof dialogStep>
+	| z.infer<typeof switchTabStep>
 	| { kind: 'group'; id: string; label: string; steps: Step[]; expect?: Expect; timeout?: number }
 
 export const StepSchema: z.ZodType<Step, z.ZodTypeDef, unknown> = z.lazy(() =>
@@ -268,6 +292,8 @@ export const StepSchema: z.ZodType<Step, z.ZodTypeDef, unknown> = z.lazy(() =>
 		assertStep,
 		extractStep,
 		scriptStep,
+		dialogStep,
+		switchTabStep,
 		BaseStepSchema.extend({
 			kind: z.literal('group'),
 			label: z.string(),
@@ -431,13 +457,16 @@ export function validateFlowContract(flow: Flow): string[] {
 			case 'group':
 				step.steps.forEach((s, i) => visitStep(s, `${where}.steps[${i}]`))
 				break
+			case 'dialog':
+			case 'switchTab':
+				break
 			default:
 				break
 		}
 		if (step.expect) visitExpect(step.expect, `${where}.expect`)
 	}
 	const visitExpect = (e: Expect, where: string): void => {
-		if (e.kind === 'urlChange' || e.kind === 'domSignature') return
+		if (e.kind === 'urlChange' || e.kind === 'domSignature' || e.kind === 'download') return
 		visitRef(e.target, `${where}.target`)
 	}
 	flow.steps.forEach((s, i) => visitStep(s, `steps[${i}]`))

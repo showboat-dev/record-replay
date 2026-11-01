@@ -37,7 +37,8 @@ export class TemplateError extends Error {
 
 const BROWSER_CRASH_RE =
 	/Target (page, context or browser |)?(has been )?closed|browser has been closed|browser has disconnected|Target crashed|Page crashed|Protocol error.*crash/i
-const NAVIGATION_RE = /net::ERR_|NS_ERROR_|ERR_(CONNECTION|NAME_NOT_RESOLVED|ABORTED|TIMED_OUT|SSL)/i
+const NAVIGATION_RE =
+	/net::ERR_|NS_ERROR_|ERR_(CONNECTION|NAME_NOT_RESOLVED|ABORTED|TIMED_OUT|SSL)/i
 /** AI 兜底的 aria-ref 在导航后失效（spike B.4）：明确可识别，便于日志/重试判定 */
 const AI_REF_STALE_RE = /Invalid frame in aria-ref selector/i
 const ACTIONABILITY_RE =
@@ -91,7 +92,8 @@ export function classifyError(
 
 	if (TIMEOUT_RE.test(message)) {
 		if (phase === 'navigate') return { code: 'NAVIGATION_FAILED', message }
-		if (phase === 'expect') return { code: 'EXPECT_MISMATCH', message: `期望未在超时内满足：${message}` }
+		if (phase === 'expect')
+			return { code: 'EXPECT_MISMATCH', message: `期望未在超时内满足：${message}` }
 		if (phase === 'resolve') return { code: 'ELEMENT_NOT_FOUND', message }
 		return { code: 'NOT_ACTIONABLE', message: `动作未能在超时内完成：${message}` }
 	}

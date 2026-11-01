@@ -11,7 +11,10 @@ describe('executor: step 树展开', () => {
 				id: 'grp',
 				kind: 'group',
 				label: '分组',
-				steps: [makeClickStep('b'), { id: 'nested', kind: 'group', label: 'n', steps: [makeClickStep('c')] }],
+				steps: [
+					makeClickStep('b'),
+					{ id: 'nested', kind: 'group', label: 'n', steps: [makeClickStep('c')] },
+				],
 			},
 			makeClickStep('d'),
 		])
@@ -40,9 +43,10 @@ describe('executor: step 树展开', () => {
 				? { ...step, button: stepId === 'grp/b' ? ('right' as const) : step.button }
 				: step,
 		)
-		expect(steps[1]?.kind === 'group' && steps[1].steps[0]?.kind === 'click'
-			? steps[1].steps[0].button
-			: null,
+		expect(
+			steps[1]?.kind === 'group' && steps[1].steps[0]?.kind === 'click'
+				? steps[1].steps[0].button
+				: null,
 		).toBe('left')
 		const group = mapped[1]
 		expect(group?.kind).toBe('group')

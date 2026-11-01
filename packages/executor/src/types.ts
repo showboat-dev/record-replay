@@ -97,6 +97,11 @@ export interface PlayOptions {
 	 * 让"自动填表"看起来像有人在操作，而不是页面一闪而过。
 	 */
 	stepDelayMs?: number
+	/**
+	 * 追加：解析元素时最多等它出现多久（ms，透传 resolver.elementWaitMs，默认 5000）。
+	 * 慢 SPA 调大、追求"失败快速返回"调小（冒烟里用 800 让不存在元素快速失败）。
+	 */
+	elementWaitMs?: number
 	/** 追加：动作前高亮目标元素（非 headless 时建议开），默认 false */
 	highlightSteps?: boolean
 	/** 追加：非 headless 回放成功结束后，浏览器保持打开的时长（ms），默认 1200 */
@@ -111,6 +116,10 @@ export interface RunReport extends RunResult {
 	startedAt: string
 	finishedAt: string
 	dialogs: string[]
+	/** 追加：本次 run 落盘的所有下载文件名（顺序 = 发生顺序） */
+	downloads?: string[]
+	/** 追加：本次 run 出现过的标签页数量（含起点页） */
+	pages?: number
 	stepsDetail: StepDetail[]
 }
 
@@ -122,6 +131,8 @@ export interface StepDetail {
 	score?: number
 	ambiguous?: boolean
 	resolveReason?: string
+	/** 追加：这一步在哪个标签页执行（多标签页流程排障用） */
+	pageIndex?: number
 	ms: number
 	artifactDir?: string
 	error?: { code: ErrorCode; message: string }

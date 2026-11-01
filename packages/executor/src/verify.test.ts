@@ -17,7 +17,9 @@ function fakePage(overrides: Partial<Page> = {}): Page {
 	return Object.assign(base, overrides) as Page
 }
 
-function fakeHit(options: { visible?: boolean; text?: string; value?: string; count?: number } = {}): ResolveResult {
+function fakeHit(
+	options: { visible?: boolean; text?: string; value?: string; count?: number } = {},
+): ResolveResult {
 	const locator = {
 		isVisible: async () => options.visible ?? true,
 		textContent: async () => options.text ?? '',
@@ -50,10 +52,14 @@ describe('executor: pollUntil', () => {
 
 	it('重试后成功', async () => {
 		let calls = 0
-		const value = await pollUntil(async () => {
-			calls += 1
-			return calls >= 3 ? 'late' : undefined
-		}, 2_000, 10)
+		const value = await pollUntil(
+			async () => {
+				calls += 1
+				return calls >= 3 ? 'late' : undefined
+			},
+			2_000,
+			10,
+		)
 		expect(value).toBe('late')
 		expect(calls).toBeGreaterThanOrEqual(3)
 	})
@@ -84,9 +90,9 @@ describe('executor: expect 判定', () => {
 	})
 
 	it('elementVisible 通过', async () => {
-		await expect(
-			verifyExpect(deps(), { kind: 'elementVisible', target: ref }, 200),
-		).resolves.toBe('visible')
+		await expect(verifyExpect(deps(), { kind: 'elementVisible', target: ref }, 200)).resolves.toBe(
+			'visible',
+		)
 	})
 
 	it('elementVisible 一直不可见 → EXPECT_MISMATCH', async () => {

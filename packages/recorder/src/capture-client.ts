@@ -6,6 +6,7 @@
  * - **候选的最终裁决在这里**——用 Playwright 自己的 locator 判 `count()===1 && visible`，
  *   这样「录制时选中的元素」和「回放时解析到的元素」是同一套语义，不会漂移。
  */
+import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 import type { Candidate } from '@rr/schema'
@@ -40,14 +41,42 @@ const MAX_SNAPSHOT_NODES = 120
 /* 安装                                                                */
 /* ------------------------------------------------------------------ */
 
-export type EmitHandler = (frame: Frame, payload: unknown) => void
+/**
+ * 事件回调：`(sourcePage, frame, payload)`。
+ * 多标签页归属必须靠 `source.page`——frame 只能说明「哪个 frame」，说明不了「哪个 tab」。
+ */
+export type EmitHandler = (sourcePage: Page, frame: Frame, payload: unknown) => void
 
 /** 装事件通道 + 注入采集脚本。顺序：先 exposeBinding 再 addInitScript。 */
 export async function installCapture(context: BrowserContext, onEmit: EmitHandler): Promise<void> {
 	await context.exposeBinding(EMIT_BINDING, (source, payload: unknown) => {
-		onEmit(source.frame, payload)
+		onEmit(source.page, source.frame, payload)
 	})
 	await context.addInitScript({ path: CAPTURE_SCRIPT_PATH })
+}
+
+/**
+ * 把采集脚本注入一个**已经存在**的文档。
+ *
+ * 为什么需要：`context.addInitScript` 覆盖不到 popup（window.open / target=_blank）的
+ * 首个真实文档 —— 实测 popup 里 `document.__rrCaptureInstalled` 为 undefined、一个事件都收不到。
+ * 这里把它当「表达式」求值（`Runtime.evaluate` 语义，不受页面 CSP 限制），
+ * capture.js 自身有 document 级幂等守卫，重复注入不会重复挂监听。
+ */
+let captureSourcePromise: Promise<string> | undefined
+export function captureScriptSource(): Promise<string> {
+	captureSourcePromise ??= readFile(CAPTURE_SCRIPT_PATH, 'utf8')
+	return captureSourcePromise
+}
+
+export async function ensureCaptureInPage(page: Page): Promise<boolean> {
+	try {
+		await page.evaluate(await captureScriptSource())
+		return true
+	} catch {
+		// 页面正在导航 / 有模态框：下次 domcontentloaded 再试
+		return false
+	}
 }
 
 /* ------------------------------------------------------------------ */
@@ -63,12 +92,24 @@ interface SnapshotPayload {
 		tag: string
 		role?: string
 		text: string
+		attributes?: Record<string, string>
+		nodePath?: number[]
 		rect: { x: number; y: number; width: number; height: number }
 	}>
+	viewport?: { width: number; height: number }
+	dpr?: number
+	scroll?: { x: number; y: number }
 }
 
-/** 抓一份全页签名（逐 frame 取，key 前缀 frameIndex 避免跨帧撞车） */
-export async function snapshotPage(page: Page): Promise<PageSignature> {
+/**
+ * 抓一份全页签名（逐 frame 取，key 前缀 frame 序号避免跨帧撞车）。
+ * @param indexOfFrame 把 Frame 映射成全局 frame 序号（record() 传 ensureFrameIndex）：
+ *   签名里带上它，`inferExpect` 挑中的「新出现元素」才能被正确解析回 Locator。
+ */
+export async function snapshotPage(
+	page: Page,
+	indexOfFrame?: (frame: Frame) => number,
+): Promise<PageSignature> {
 	const nodes: PageSignature['nodes'] = []
 	const frames = page.frames().slice(0, MAX_FRAMES)
 	for (let index = 0; index < frames.length; index++) {
@@ -83,8 +124,16 @@ export async function snapshotPage(page: Page): Promise<PageSignature> {
 			// frame 已销毁 / 正在导航：跳过
 			continue
 		}
+		const frameIndex = indexOfFrame ? indexOfFrame(frame) : index
 		for (const node of payload?.nodes ?? []) {
-			nodes.push({ ...node, key: `${index}:${node.key}` })
+			nodes.push({
+				...node,
+				frameIndex,
+				key: `${frameIndex}:${node.key}`,
+				viewport: payload?.viewport,
+				dpr: payload?.dpr,
+				scroll: payload?.scroll,
+			})
 		}
 	}
 	return { url: page.url(), nodes }

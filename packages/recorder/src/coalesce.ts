@@ -38,6 +38,29 @@ export function coalesceEvents(events: RawEvent[], opts: CoalesceOptions = {}): 
 				// 只作为事实来源（拖拽/右键判断），本身不成步
 				break
 
+			case 'hover': {
+				if (!event.facts) break
+				// 同一元素的连续 hover 只留一条（页面内已有 1.5s 节流，这里再兜一次跨批次的重复）
+				const prev = lastAction(actions)
+				if (prev && prev.kind === 'hover' && sameTarget(prev, { facts: event.facts }) && event.ts - prev.ts <= INPUT_MERGE_MS) {
+					prev.ts = event.ts
+					prev.merged = (prev.merged ?? 1) + 1
+					prev.raw.push(event)
+					break
+				}
+				actions.push({
+					kind: 'hover',
+					ts: event.ts,
+					facts: event.facts,
+					frameIndex: event.frameIndex,
+					frameUrl: event.frameUrl,
+					pageIndex: event.pageIndex,
+					merged: 1,
+					raw: [event],
+				})
+				break
+			}
+
 			case 'click':
 			case 'contextmenu': {
 				const action = clickAction(event)
@@ -110,6 +133,28 @@ export function coalesceEvents(events: RawEvent[], opts: CoalesceOptions = {}): 
 				const key = data.key
 				if (!key) break
 				if (MODIFIER_KEYS.has(key)) break
+				const modifiers = normalizeModifiers(data.modifiers)
+				// 组合键（Ctrl/Alt/Meta + 任意键）单独成一步，绝不并进 input：
+				// 它改变的是「操作语义」（保存/全选/切页），不是文本内容。
+				//
+				// 例外：Shift + 可打印字符不算组合键 —— 那只是「打大写字母」，
+				// 若也成步，用户录一句 "Alice" 会被切成 A/input/l/input… 完全不可用。
+				const isCommandCombo = modifiers.some((modifier) => modifier !== 'Shift')
+				if (isCommandCombo) {
+					actions.push({
+						kind: 'key',
+						ts: event.ts,
+						facts: event.facts,
+						frameIndex: event.frameIndex,
+						frameUrl: event.frameUrl,
+						pageIndex: event.pageIndex,
+						key,
+						modifiers,
+						merged: 1,
+						raw: [event],
+					})
+					break
+				}
 				if (data.isPrintable) {
 					// 可打印字符：后面通常会跟一个 input 事件，那条才是用户意图（值变化）
 					if (isEditableTarget(event) && hasFollowingInput(sorted, i, INPUT_MERGE_MS, event)) break
@@ -122,7 +167,9 @@ export function coalesceEvents(events: RawEvent[], opts: CoalesceOptions = {}): 
 					facts: event.facts,
 					frameIndex: event.frameIndex,
 					frameUrl: event.frameUrl,
+					pageIndex: event.pageIndex,
 					key,
+					modifiers: modifiers.length ? modifiers : undefined,
 					merged: 1,
 					raw: [event],
 				})
@@ -153,6 +200,7 @@ export function coalesceEvents(events: RawEvent[], opts: CoalesceOptions = {}): 
 					frameIndex: event.frameIndex,
 					frameUrl: event.frameUrl,
 					delta: { x: dx, y: dy },
+					pageIndex: event.pageIndex,
 					merged: 1,
 					raw: [event],
 				})
@@ -174,6 +222,7 @@ export function coalesceEvents(events: RawEvent[], opts: CoalesceOptions = {}): 
 					ts: event.ts,
 					frameIndex: event.frameIndex,
 					frameUrl: event.frameUrl,
+					pageIndex: event.pageIndex,
 					url,
 					merged: 1,
 					raw: [event],
@@ -203,6 +252,7 @@ function clickAction(event: RawEvent): CoalescedAction | null {
 		clickCount: 1,
 		modifiers: normalizeModifiers(event.data?.modifiers),
 		offset: event.data?.offset,
+		pageIndex: event.pageIndex,
 		merged: 1,
 		raw: [event],
 	}
@@ -217,6 +267,7 @@ function inputAction(event: RawEvent): CoalescedAction {
 		frameUrl: event.frameUrl,
 		value: event.data?.value,
 		masked: event.data?.masked,
+		pageIndex: event.pageIndex,
 		merged: 1,
 		raw: [event],
 	}
@@ -231,6 +282,7 @@ function selectAction(event: RawEvent): CoalescedAction {
 		frameUrl: event.frameUrl,
 		value: event.data?.value,
 		selectedValues: event.data?.selectedValues,
+		pageIndex: event.pageIndex,
 		merged: 1,
 		raw: [event],
 	}

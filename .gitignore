@@ -3,3 +3,6 @@ artifacts/
 *.log
 .DS_Store
 .flow-backups/
+
+# 用户自己录的流程（可能含内部系统数据），不入库
+flows/studio-*.json

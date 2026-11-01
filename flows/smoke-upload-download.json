@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxqk0tn_d2sewo",
+  "title": "/upload-download",
+  "version": 1,
+  "createdAt": "2026-11-01T11:17:31.978Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5173/upload-download",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [
+    {
+      "name": "file_1",
+      "type": "file",
+      "secret": false,
+      "source": "input"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "upload",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "upload-input",
+            "name": "file",
+            "type": "file",
+            "multiple": "",
+            "aria-label": "选择文件",
+            "data-testid": "upload-input"
+          },
+          "rect": {
+            "x": 327,
+            "y": 248.7,
+            "width": 253,
+            "height": 21
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531851599
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "upload-input",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "选择文件",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "选择文件",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#upload-input",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"file\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[3]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "button",
+          "accessibleName": "选择文件",
+          "attrs": {
+            "id": "upload-input",
+            "name": "file",
+            "type": "file",
+            "aria-label": "选择文件",
+            "data-testid": "upload-input"
+          },
+          "stableHash": "27ee79a9e669175337c7a71c841956e5f8d92e81",
+          "nodePath": [
+            1,
+            1,
+            0,
+            2
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #upload-input [testid=upload-input] role=button name=\"选择文件\"",
+        "nearbyText": [
+          "选择文件（支持多选）",
+          "未选择文件"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "files": [
+        "{{file_1}}"
+      ]
+    },
+    {
+      "id": "s2",
+      "expect": {
+        "kind": "download",
+        "filenamePattern": "report.csv"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "download-btn",
+            "data-testid": "trigger-download",
+            "aria-label": "触发下载 report.csv"
+          },
+          "text": "触发下载",
+          "rect": {
+            "x": 327,
+            "y": 527.75,
+            "width": 90,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531851677
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "trigger-download",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "触发下载 report.csv",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "触发下载 report.csv",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "触发下载 report.csv",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#download-btn",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[2]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "触发下载 report.csv",
+          "attrs": {
+            "type": "button",
+            "id": "download-btn",
+            "data-testid": "trigger-download",
+            "aria-label": "触发下载 report.csv"
+          },
+          "stableHash": "02c721c58ad6cd4cd095b2d248e5ff01f2a04f76",
+          "nodePath": [
+            1,
+            1,
+            1,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #download-btn [testid=trigger-download] role=button name=\"触发下载 report.csv\"",
+        "nearbyText": [
+          "普通下载链接（data URL，report-link.csv）"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

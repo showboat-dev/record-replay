@@ -16,16 +16,26 @@ export * from './template.js'
 export * from './steps.js'
 export * from './selfheal.js'
 export * from './url.js'
-export { ArtifactWriter, sanitizeSegment } from './artifacts.js'
+export {
+	ArtifactWriter,
+	sanitizeDownloadName,
+	sanitizeSegment,
+	uniqueDownloadFilename,
+} from './artifacts.js'
+export { buildKeyChord, describeKeyChord } from './keys.js'
+export type { KeyModifier } from './keys.js'
+export {
+	PageManager,
+	resolveStepPageIndex,
+	type PageSlot,
+	type PageWaitMode,
+	type StepPageLike,
+} from './tabs.js'
+export { DialogManager, type DialogAction, type DialogLike, type DialogMode, type PendingDialog } from './dialogs.js'
+export { DownloadManager, type DownloadRecord } from './downloads.js'
 export { runAction } from './actions.js'
 export { executeRun } from './run.js'
-export {
-	EXPECT_WAIT_MS,
-	domSignatureOf,
-	pollUntil,
-	runAssertion,
-	verifyExpect,
-} from './verify.js'
+export { EXPECT_WAIT_MS, domSignatureOf, pollUntil, runAssertion, verifyExpect } from './verify.js'
 export type { VerifyDeps } from './verify.js'
 export type { ActionDeps, ActionResult } from './actions.js'
 export type { RunOutcome } from './run.js'

@@ -50,7 +50,9 @@ describe('executor: 失败归类（不允许裸 timeout）', () => {
 			classifyError(new Error('page.goto: net::ERR_NAME_NOT_RESOLVED at http://nope'), 'navigate')
 				.code,
 		).toBe('NAVIGATION_FAILED')
-		expect(classifyError(new Error('NS_ERROR_UNKNOWN_HOST'), 'action').code).toBe('NAVIGATION_FAILED')
+		expect(classifyError(new Error('NS_ERROR_UNKNOWN_HOST'), 'action').code).toBe(
+			'NAVIGATION_FAILED',
+		)
 	})
 
 	it('Playwright actionability 关键词 → NOT_ACTIONABLE', () => {
@@ -60,9 +62,9 @@ describe('executor: 失败归类（不允许裸 timeout）', () => {
 				'action',
 			).code,
 		).toBe('NOT_ACTIONABLE')
-		expect(
-			classifyError(new Error('element is not stable, retrying'), 'action').code,
-		).toBe('NOT_ACTIONABLE')
+		expect(classifyError(new Error('element is not stable, retrying'), 'action').code).toBe(
+			'NOT_ACTIONABLE',
+		)
 		expect(
 			classifyError(new Error('strict mode violation: locator resolved to 3 elements'), 'action')
 				.code,

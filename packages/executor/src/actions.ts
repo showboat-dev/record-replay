@@ -15,6 +15,7 @@ import type { Page } from 'playwright'
 import type { ResolveLevel, ResolveResult } from '@rr/resolver'
 
 import { StepFailure } from './errors.js'
+import { buildKeyChord, describeKeyChord } from './keys.js'
 
 export interface ActionDeps {
 	page: Page
@@ -23,6 +24,12 @@ export interface ActionDeps {
 	resolveTarget: (target: ElementRef, opts?: { requireVisible?: boolean }) => Promise<ResolveResult>
 	/** extract 写入这里，后续步骤可用 {{var}} */
 	vars: Record<string, string>
+	/**
+	 * 原生对话框是否已挂起（manual 模式）。
+	 * 用途：点击触发 confirm/prompt 时，Playwright 的 click promise 会因为渲染进程被阻塞而
+	 * 一直等到超时；这里允许"对话框已出现"算点击成功，把处理权交给后面的 dialog 步骤。
+	 */
+	dialogPending?: () => boolean
 }
 
 export interface ActionResult {
@@ -36,7 +43,9 @@ export interface ActionResult {
 
 type ActionStep = Exclude<Step, { kind: 'group' }>
 
-function metaOf(hit: ResolveResult): Pick<ActionResult, 'level' | 'score' | 'ambiguous' | 'resolveReason'> {
+function metaOf(
+	hit: ResolveResult,
+): Pick<ActionResult, 'level' | 'score' | 'ambiguous' | 'resolveReason'> {
 	const out: Pick<ActionResult, 'level' | 'score' | 'ambiguous' | 'resolveReason'> = {
 		level: hit.level,
 		score: hit.score,
@@ -57,6 +66,20 @@ async function withTarget<T>(
 		return { value: await fn(hit), hit }
 	} finally {
 		if (hit.release) await hit.release()
+	}
+}
+
+/** 轮询直到条件成立或超时；用于"等一个异步出现的状态"（例如对话框挂起） */
+export async function waitForCondition(
+	condition: () => boolean,
+	timeoutMs: number,
+	pollMs = 25,
+): Promise<boolean> {
+	const deadline = Date.now() + Math.max(0, timeoutMs)
+	for (;;) {
+		if (condition()) return true
+		if (Date.now() >= deadline) return false
+		await new Promise((resolveSleep) => setTimeout(resolveSleep, pollMs))
 	}
 }
 
@@ -86,7 +109,8 @@ export async function runAction(deps: ActionDeps, step: ActionStep): Promise<Act
 			// 只能点 host 并带 padding-box 相对偏移；position 优先用 step.position，
 			// 其次回退到录制时记下的 observed.innerOffset。
 			const closedShadow = step.target.observed.shadowRootType === 'closed'
-			const position = step.position ?? (closedShadow ? step.target.observed.innerOffset : undefined)
+			const position =
+				step.position ?? (closedShadow ? step.target.observed.innerOffset : undefined)
 			if (closedShadow && !position) {
 				throw new StepFailure(
 					'NOT_ACTIONABLE',
@@ -105,7 +129,30 @@ export async function runAction(deps: ActionDeps, step: ActionStep): Promise<Act
 				}
 				if (step.modifiers.length > 0) options.modifiers = [...step.modifiers]
 				if (position) options.position = position
-				await h.locator.click(options)
+				const clickPromise = h.locator.click(options)
+				// 3) 若点击会弹出原生对话框，渲染进程被阻塞，click promise 永远等不到 ack ——
+				//    与"对话框出现"赛跑，先出现对话框就算点击成功（真实点击已派发）。
+				if (deps.dialogPending) {
+					let settled = false
+					const raced = await Promise.race([
+						clickPromise.then(() => {
+							settled = true
+							return 'clicked' as const
+						}),
+						waitForCondition(() => deps.dialogPending?.() === true, 2_000).then((ok) =>
+							ok ? ('dialog' as const) : ('clicked' as const),
+						),
+					])
+					if (raced === 'dialog' && !settled) {
+						deps.log('点击触发了原生对话框：渲染进程被阻塞，提前结束 click 等待（交给 dialog 步骤处理）')
+						// 这个 promise 之后可能因页面阻塞而 reject，必须吞掉避免 unhandled rejection
+						void clickPromise.catch(() => undefined)
+						return
+					}
+					await clickPromise
+					return
+				}
+				await clickPromise
 			})
 			const where = closedShadow
 				? `host+position(${position?.x ?? 0},${position?.y ?? 0})`
@@ -160,16 +207,19 @@ export async function runAction(deps: ActionDeps, step: ActionStep): Promise<Act
 		}
 
 		case 'key': {
+			// 组合键：['Control'] + 'A' → 'Control+A'（纯函数拼接，老 flow 的 key 里已带 + 时原样用）
+			const chord = buildKeyChord(step.key, step.modifiers)
+			const label = describeKeyChord(chord)
 			if (step.target) {
 				const { hit } = await withTarget(deps, step.target, async (h) => {
-					await h.locator.press(step.key, { timeout })
+					await h.locator.press(chord, { timeout })
 				})
-				deps.log(`key ${step.key} on ${hit.level} ✓`)
+				deps.log(`key ${label} on ${hit.level} ✓`)
 				return metaOf(hit)
 			}
-			await deps.page.keyboard.press(step.key)
-			deps.log(`key ${step.key} on page ✓`)
-			return { note: `key=${step.key}` }
+			await deps.page.keyboard.press(chord)
+			deps.log(`key ${label} on page ✓`)
+			return { note: `key=${chord}` }
 		}
 
 		case 'hover': {
@@ -183,12 +233,15 @@ export async function runAction(deps: ActionDeps, step: ActionStep): Promise<Act
 		case 'scroll': {
 			if (step.target && step.to) {
 				const { hit } = await withTarget(deps, step.target, async (h) => {
-					await h.locator.evaluate((el, to) => {
-						const scrollable = el as HTMLElement
-						const top = to === 'top' ? 0 : scrollable.scrollHeight
-						if (typeof scrollable.scrollTo === 'function') scrollable.scrollTo({ top })
-						else scrollable.scrollIntoView(to === 'top')
-					}, step.to as 'top' | 'bottom')
+					await h.locator.evaluate(
+						(el, to) => {
+							const scrollable = el as HTMLElement
+							const top = to === 'top' ? 0 : scrollable.scrollHeight
+							if (typeof scrollable.scrollTo === 'function') scrollable.scrollTo({ top })
+							else scrollable.scrollIntoView(to === 'top')
+						},
+						step.to as 'top' | 'bottom',
+					)
 				})
 				return metaOf(hit)
 			}
@@ -293,6 +346,16 @@ export async function runAction(deps: ActionDeps, step: ActionStep): Promise<Act
 		case 'assert': {
 			// 断言本身在 verify.ts 里判定，这里只把 target 解析出来（由 run.ts 统一调用）
 			throw new StepFailure('EXPECT_MISMATCH', 'assert 步骤应由 verify 分支处理')
+		}
+
+		case 'dialog': {
+			// 原生对话框由 run.ts 的 dialog 管理逻辑处理（需要跨步骤状态：等到对话框出现再 accept/dismiss）
+			throw new StepFailure('NOT_ACTIONABLE', 'dialog 步骤应由 run.ts 的对话框管理逻辑处理')
+		}
+
+		case 'switchTab': {
+			// 标签页切换由 run.ts 的 page 管理逻辑处理
+			throw new StepFailure('NOT_ACTIONABLE', 'switchTab 步骤应由 run.ts 的 page 管理逻辑处理')
 		}
 
 		default: {

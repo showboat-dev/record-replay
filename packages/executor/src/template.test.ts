@@ -33,10 +33,7 @@ describe('executor: 变量替换', () => {
 
 	it('缺变量 → TemplateError，且带变量名（绝不留空串）', () => {
 		try {
-			renderStep(
-				{ id: 'fill', kind: 'input', target: ref, value: '{{email}}', clear: true },
-				{},
-			)
+			renderStep({ id: 'fill', kind: 'input', target: ref, value: '{{email}}', clear: true }, {})
 			throw new Error('应当抛错')
 		} catch (err) {
 			expect(err).toBeInstanceOf(TemplateError)
@@ -71,6 +68,35 @@ describe('executor: 变量替换', () => {
 			{ a: 'cn', b: 'us' },
 		)
 		expect(select.kind === 'select' && select.value).toEqual(['cn', 'us'])
+	})
+
+	it('upload.files 的 {{file}} 模板（业务人员上传本地文件）', () => {
+		const rendered = renderStep(
+			{ id: 'up', kind: 'upload', target: ref, files: ['{{file}}', '/fixed/path.png'] },
+			{ file: '/tmp/订单附件.txt' },
+		)
+		expect(rendered.kind === 'upload' && rendered.files).toEqual([
+			'/tmp/订单附件.txt',
+			'/fixed/path.png',
+		])
+	})
+
+	it('upload.files 缺变量 → TemplateError(带变量名)', () => {
+		try {
+			renderStep({ id: 'up', kind: 'upload', target: ref, files: ['{{file}}'] }, {})
+			throw new Error('应当抛错')
+		} catch (err) {
+			expect(err).toBeInstanceOf(TemplateError)
+			expect((err as TemplateError).variable).toBe('file')
+		}
+	})
+
+	it('dialog.promptText 支持变量（prompt 的输入值来自业务数据）', () => {
+		const rendered = renderStep(
+			{ id: 'd', kind: 'dialog', action: 'accept', promptText: '你好 {{name}}' },
+			{ name: '张三' },
+		)
+		expect(rendered.kind === 'dialog' && rendered.promptText).toBe('你好 张三')
 	})
 
 	it('group 递归渲染子步骤', () => {

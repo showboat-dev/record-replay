@@ -1,0 +1,728 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxqjx9x_zjf1dz",
+  "title": "/tabs",
+  "version": 1,
+  "createdAt": "2026-11-01T11:17:27.304Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5173/tabs",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "a-input",
+            "name": "aInput",
+            "type": "text",
+            "aria-label": "A 系统输入",
+            "data-testid": "a-input",
+            "placeholder": "给 A 系统输入点什么"
+          },
+          "rect": {
+            "x": 327,
+            "y": 246.33,
+            "width": 786,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531846962
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "a-input",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "A 系统输入",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "A 系统输入",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "A 系统输入",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#a-input",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"aInput\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"给 A 系统输入点什么\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[3]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "A 系统输入",
+          "attrs": {
+            "id": "a-input",
+            "name": "aInput",
+            "type": "text",
+            "aria-label": "A 系统输入",
+            "data-testid": "a-input",
+            "placeholder": "给 A 系统输入点什么"
+          },
+          "stableHash": "70c9625b65e28408163c4a3b6db830498e20aeee",
+          "nodePath": [
+            1,
+            1,
+            0,
+            2
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #a-input [testid=a-input] role=textbox name=\"A 系统输入\"",
+        "nearbyText": [
+          "A 系统输入",
+          "确认 A 打开 B 系统"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "value": "hello-a",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "open-tab-b",
+            "data-testid": "open-tab-b",
+            "aria-label": "打开 B 系统"
+          },
+          "text": "打开 B 系统",
+          "rect": {
+            "x": 410.86,
+            "y": 303.58,
+            "width": 107.59,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531847039
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "open-tab-b",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "打开 B 系统",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "打开 B 系统",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "打开 B 系统",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#open-tab-b",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button.secondary",
+            "score": 650,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[4]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "打开 B 系统",
+          "attrs": {
+            "type": "button",
+            "id": "open-tab-b",
+            "data-testid": "open-tab-b",
+            "aria-label": "打开 B 系统"
+          },
+          "stableHash": "7d79d6fa9c43a3dac5e8b47790701640a8039942",
+          "nodePath": [
+            1,
+            1,
+            0,
+            3,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #open-tab-b [testid=open-tab-b] role=button name=\"打开 B 系统\"",
+        "nearbyText": [
+          "确认 A"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s3",
+      "page": {
+        "index": 1
+      },
+      "kind": "switchTab",
+      "index": 1
+    },
+    {
+      "id": "s4",
+      "page": {
+        "index": 1
+      },
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "b-input",
+            "name": "bInput",
+            "type": "text",
+            "aria-label": "B 系统输入",
+            "data-testid": "b-input",
+            "placeholder": "给 B 系统输入点什么"
+          },
+          "rect": {
+            "x": 327,
+            "y": 226.19,
+            "width": 786,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531847095
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "b-input",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "B 系统输入",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "B 系统输入",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "B 系统输入",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#b-input",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"bInput\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"给 B 系统输入点什么\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[3]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "B 系统输入",
+          "attrs": {
+            "id": "b-input",
+            "name": "bInput",
+            "type": "text",
+            "aria-label": "B 系统输入",
+            "data-testid": "b-input",
+            "placeholder": "给 B 系统输入点什么"
+          },
+          "stableHash": "ff3ed186f528ef16bd1bf16ae13444d0d98bc93d",
+          "nodePath": [
+            1,
+            1,
+            0,
+            2
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #b-input [testid=b-input] role=textbox name=\"B 系统输入\"",
+        "nearbyText": [
+          "B 系统输入",
+          "提交 B 关闭当前标签页"
+        ],
+        "crop": {
+          "ref": "record/elements/3.png",
+          "dpr": 1
+        }
+      },
+      "value": "from-b",
+      "clear": true
+    },
+    {
+      "id": "s5",
+      "page": {
+        "index": 1
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "submit-b",
+            "data-testid": "submit-b",
+            "aria-label": "提交 B"
+          },
+          "text": "提交 B",
+          "rect": {
+            "x": 327,
+            "y": 283.44,
+            "width": 73.61,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531847178
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "submit-b",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "提交 B",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "提交 B",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "提交 B",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#submit-b",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[4]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "提交 B",
+          "attrs": {
+            "type": "button",
+            "id": "submit-b",
+            "data-testid": "submit-b",
+            "aria-label": "提交 B"
+          },
+          "stableHash": "e8f40f7a84bae13a82c9e516a555eb434ae8aaad",
+          "nodePath": [
+            1,
+            1,
+            0,
+            3,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #submit-b [testid=submit-b] role=button name=\"提交 B\"",
+        "nearbyText": [
+          "关闭当前标签页"
+        ],
+        "crop": {
+          "ref": "record/elements/4.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s6",
+      "kind": "switchTab",
+      "index": 0
+    },
+    {
+      "id": "s7",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "div",
+            "attributes": {
+              "id": "tabs-result",
+              "role": "status",
+              "aria-live": "polite",
+              "data-testid": "tabs-result"
+            },
+            "text": "A 已确认（第 1 次）: hello-a",
+            "rect": {
+              "x": 327,
+              "y": 358.83,
+              "width": 786,
+              "height": 45.25
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793531847290
+          },
+          "candidates": [
+            {
+              "kind": "testid",
+              "value": "tabs-result",
+              "score": 10,
+              "source": "record"
+            },
+            {
+              "kind": "role",
+              "value": {
+                "role": "status"
+              },
+              "score": 46,
+              "source": "record"
+            },
+            {
+              "kind": "text",
+              "value": "A 已确认（第 1 次）: hello-a",
+              "score": 70,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "#tabs-result",
+              "score": 100,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "div.result",
+              "score": 650,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[2]/*[1]/*[5]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "div",
+            "role": "status",
+            "attrs": {
+              "id": "tabs-result",
+              "role": "status",
+              "data-testid": "tabs-result"
+            },
+            "stableHash": "cb6fb230181b4422b50f70480afaea413c765ad3",
+            "nodePath": [
+              1,
+              1,
+              0,
+              4
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "div #tabs-result [testid=tabs-result] role=status text=\"A 已确认（第 1 次）: hello-a\"",
+          "nearbyText": [
+            "确认 A 打开 B 系统",
+            "window.open 成功，打开 /tab-b确认 A: hello-a"
+          ]
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "confirm-a",
+            "data-testid": "confirm-a",
+            "aria-label": "确认 A"
+          },
+          "text": "确认 A",
+          "rect": {
+            "x": 327,
+            "y": 303.58,
+            "width": 73.86,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531847239
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "confirm-a",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "确认 A",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "确认 A",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "确认 A",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#confirm-a",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[4]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "确认 A",
+          "attrs": {
+            "type": "button",
+            "id": "confirm-a",
+            "data-testid": "confirm-a",
+            "aria-label": "确认 A"
+          },
+          "stableHash": "9de032eecaec47721a00f5eaf77345d0d2982be9",
+          "nodePath": [
+            1,
+            1,
+            0,
+            3,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #confirm-a [testid=confirm-a] role=button name=\"确认 A\"",
+        "nearbyText": [
+          "打开 B 系统"
+        ],
+        "crop": {
+          "ref": "record/elements/6.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

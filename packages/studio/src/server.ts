@@ -6,7 +6,7 @@
  * 契约见 docs/studio-api.md；前端在 packages/studio/public（纯静态）。
  */
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, readdir, stat } from 'node:fs/promises'
+import { mkdir, readFile, readdir, stat as fsStat } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -52,6 +52,13 @@ function describeTarget(step: Step): string {
 }
 
 export function stepTitle(step: Step): string {
+	const raw = stepTitleInner(step)
+	// 多标签页流程：业务人员要能一眼看出"这一步发生在哪个页"
+	const pageIndex = 'page' in step && step.page ? (step.page as { index: number }).index : undefined
+	return pageIndex && pageIndex > 0 ? `标签页 ${pageIndex + 1}：${raw}` : raw
+}
+
+function stepTitleInner(step: Step): string {
 	switch (step.kind) {
 		case 'navigate':
 			return `打开 ${step.url}`
@@ -79,6 +86,10 @@ export function stepTitle(step: Step): string {
 			return `提取「${describeTarget(step)}」到变量 {{${step.into}}}`
 		case 'script':
 			return '执行脚本'
+		case 'dialog':
+			return `确认浏览器弹窗（${step.action === 'accept' ? '确定' : '取消'}）`
+		case 'switchTab':
+			return `切换到第 ${step.index + 1} 个标签页`
 		case 'group':
 			return `分组：${step.label}`
 		default:
@@ -233,12 +244,15 @@ async function listFlows(): Promise<Array<Record<string, unknown>>> {
 	const out: Array<Record<string, unknown>> = []
 	for (const file of files) {
 		try {
-			const flow = await loadFlow(join(FLOWS_DIR, file))
+			const full = join(FLOWS_DIR, file)
+			const flow = await loadFlow(full)
+			const stat = await fsStat(full).catch(() => undefined)
 			out.push({
 				file,
 				title: flow.title,
 				steps: flattenSteps(flow.steps).length,
 				version: flow.version,
+				...(stat ? { updatedAt: stat.mtime.toISOString() } : {}),
 			})
 		} catch {
 			/* 非法 flow 不进列表 */

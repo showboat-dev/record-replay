@@ -20,6 +20,8 @@ export interface VerifyDeps {
 	resolveTarget: (target: ElementRef, opts?: { requireVisible?: boolean }) => Promise<ResolveResult>
 	timeoutMs: number
 	log: (msg: string) => void
+	/** 本次 run 已发生的下载（文件名列表），用于 expect.kind === 'download' */
+	recentDownloads?: () => string[]
 }
 
 /** 期望校验的默认等待上限（契约：elementVisible/Hidden 轮询 5s） */
@@ -156,6 +158,21 @@ export async function verifyExpect(
 			return `text=${want}`
 		}
 
+		case 'download': {
+			// 下载事件由 executor 的 download 监听器记录；这里轮询"最近是否出现了符合的下载"
+			const matched = await pollUntil(async () => {
+				const downloads = deps.recentDownloads?.() ?? []
+				const hit = expect.filenamePattern
+					? downloads.some((d) => new RegExp(expect.filenamePattern!, 'i').test(d))
+					: downloads.length > 0
+				return hit ? 'download' : undefined
+			}, waitMs)
+			if (matched === undefined) {
+				throw new StepFailure('EXPECT_MISMATCH', `期望触发下载，但 ${waitMs}ms 内没有检测到下载`)
+			}
+			deps.log('expect download ✓')
+			return 'download'
+		}
 		case 'domSignature': {
 			const ok = await pollUntil(async () => {
 				const hash = await domSignatureOf(deps.page, expect.region ?? 'body')
@@ -198,7 +215,8 @@ export async function runAssertion(
 				const state = await visibleStateOf(deps, ref)
 				return state.found && state.visible ? 'visible' : undefined
 			}, waitMs)
-			if (ok === undefined) throw new StepFailure('EXPECT_MISMATCH', 'assert visible 失败：元素不可见')
+			if (ok === undefined)
+				throw new StepFailure('EXPECT_MISMATCH', 'assert visible 失败：元素不可见')
 			return 'visible'
 		}
 		case 'hidden': {
@@ -207,7 +225,8 @@ export async function runAssertion(
 				const state = await visibleStateOf(deps, ref)
 				return !state.found || !state.visible ? 'hidden' : undefined
 			}, waitMs)
-			if (ok === undefined) throw new StepFailure('EXPECT_MISMATCH', 'assert hidden 失败：元素仍可见')
+			if (ok === undefined)
+				throw new StepFailure('EXPECT_MISMATCH', 'assert hidden 失败：元素仍可见')
 			return 'hidden'
 		}
 		case 'text': {

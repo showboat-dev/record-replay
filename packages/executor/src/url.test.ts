@@ -5,9 +5,7 @@ import { rebaseUrl } from './index.js'
 describe('executor: baseUrl 重定基（只换 origin）', () => {
 	it('绝对 URL：只换 origin，path/query/hash 原样保留', () => {
 		expect(rebaseUrl('http://a:111/x?q=1', 'http://b:222')).toBe('http://b:222/x?q=1')
-		expect(rebaseUrl('http://a:111/x?q=1#frag', 'http://b:222')).toBe(
-			'http://b:222/x?q=1#frag',
-		)
+		expect(rebaseUrl('http://a:111/x?q=1#frag', 'http://b:222')).toBe('http://b:222/x?q=1#frag')
 		expect(rebaseUrl('https://old.example.com/deep/path', 'http://127.0.0.1:5173')).toBe(
 			'http://127.0.0.1:5173/deep/path',
 		)

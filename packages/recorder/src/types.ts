@@ -70,7 +70,15 @@ export interface RawElementFacts {
 /* ------------------------------------------------------------------ */
 
 export type RawEventKind =
-	'click' | 'pointerdown' | 'contextmenu' | 'keydown' | 'input' | 'change' | 'scroll' | 'navigation'
+	| 'click'
+	| 'pointerdown'
+	| 'contextmenu'
+	| 'keydown'
+	| 'input'
+	| 'change'
+	| 'scroll'
+	| 'hover'
+	| 'navigation'
 
 /** 各事件类型的特有字段（页面 → Node 原样回传） */
 export interface RawEventData {
@@ -93,6 +101,8 @@ export interface RawEventData {
 	/** scroll 增量（页面内基于上一次滚动位置算好） */
 	dx?: number
 	dy?: number
+	/** hover 停留时长（页面内已验证 ≥350ms 未移出） */
+	dwellMs?: number
 	/**
 	 * 点击点相对「被点元素 padding box」的 CSS px 偏移。
 	 * 用途只有一个：closed shadow 目标回放时必须给 host 一个精确的 position。
@@ -106,6 +116,8 @@ export interface RawEvent {
 	ts: number
 	/** 事件所在 frame 的序号（Node 侧按 Frame 对象分配） */
 	frameIndex?: number
+	/** 事件来自哪个标签页（Node 侧按 Page 创建顺序分配，0 = 录制起点） */
+	pageIndex?: number
 	frameUrl?: string
 	/** navigation 事件的目标 url */
 	url?: string
@@ -135,6 +147,8 @@ export interface CoalescedAction {
 	facts?: RawElementFacts
 	frameIndex?: number
 	frameUrl?: string
+	/** 在哪个标签页（由 RawEvent 透传；合成 switchTab 时用来决定切页） */
+	pageIndex?: number
 
 	/** click */
 	button?: 'left' | 'right' | 'middle'
@@ -147,7 +161,7 @@ export interface CoalescedAction {
 	/** input 的值被屏蔽（password） */
 	masked?: boolean
 
-	/** key */
+	/** key（组合键时与 modifiers 一起使用） */
 	key?: string
 
 	/** scroll */
@@ -181,6 +195,14 @@ export interface SignatureNode {
 	/** 该节点属于哪个 frame（0 = 主 frame） */
 	frameIndex?: number
 	text: string
+	/** 快照时的属性白名单（元素消失后重建 ElementRef 用） */
+	attributes?: Record<string, string>
+	/** 快照时的 children 索引链 */
+	nodePath?: number[]
+	/** 快照所在页面的视口 / dpr / 滚动位置（同上） */
+	viewport?: { width: number; height: number }
+	dpr?: number
+	scroll?: { x: number; y: number }
 	rect: Rect
 	uid?: string
 	/** 若该节点被选为 expect 目标，record() 会按需填入 */
@@ -228,3 +250,47 @@ export interface RecordResult {
 	artifactsDir: string
 	rawPath?: string
 }
+
+/* ------------------------------------------------------------------ */
+/* 录制期旁路事件：原生对话框 / 下载                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 录制期捕获的原生对话框。
+ * 录制器会**立刻 accept**（否则页面被 modal 卡住录不下去），同时记一条 dialog 步骤供回放复现。
+ */
+export interface RecordedDialog {
+	ts: number
+	pageIndex: number
+	action: 'accept' | 'dismiss'
+	/** prompt 的默认/输入文案（alert/confirm 无） */
+	promptText?: string
+}
+
+/** 录制期捕获的下载（用来给触发它的那一步补 `expect: {kind:'download'}`） */
+export interface RecordedDownload {
+	ts: number
+	pageIndex: number
+	filename: string
+}
+
+/* ------------------------------------------------------------------ */
+/* 规划结果：动作 / 合成 switchTab / dialog                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 合流之后、成步之前的一层「规划」。
+ * 这一层是**纯函数**（`plan.ts`），负责两件不能靠单条事件决定的事：
+ * 1. 标签页切换：动作的 pageIndex 变化时，先在前面插一条合成 `switchTab`；
+ * 2. 对话框顺序：dialog 是旁路事件，按时间戳插到「触发它的那一步」之后。
+ */
+export type PlannedItem =
+	| { kind: 'action'; action: CoalescedAction }
+	| { kind: 'switchTab'; ts: number; index: number; pageIndex: number }
+	| {
+			kind: 'dialog'
+			ts: number
+			pageIndex: number
+			action: 'accept' | 'dismiss'
+			promptText?: string
+	  }

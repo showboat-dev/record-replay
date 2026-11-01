@@ -38,10 +38,17 @@ describe('executor: 自愈候选择优', () => {
 		).toMatchObject({ kind: 'testid', value: 'submit-basic', source: 'ai' })
 
 		expect(
-			pickCandidateFromFacts({ tag: 'button', id: 'submit-basic', role: 'button', accessibleName: '提交' }),
+			pickCandidateFromFacts({
+				tag: 'button',
+				id: 'submit-basic',
+				role: 'button',
+				accessibleName: '提交',
+			}),
 		).toMatchObject({ kind: 'css', value: '#submit-basic' })
 
-		expect(pickCandidateFromFacts({ tag: 'button', role: 'button', accessibleName: '提交' })).toEqual({
+		expect(
+			pickCandidateFromFacts({ tag: 'button', role: 'button', accessibleName: '提交' }),
+		).toEqual({
 			kind: 'role',
 			value: { role: 'button', name: '提交', exact: false },
 			score: 0,
@@ -83,9 +90,9 @@ describe('executor: 自愈候选择优', () => {
 	})
 
 	it('describeCandidateForLog 可读', () => {
-		expect(describeCandidateForLog({ kind: 'testid', value: 'x', score: 0, source: 'record' })).toBe(
-			'testid(x)',
-		)
+		expect(
+			describeCandidateForLog({ kind: 'testid', value: 'x', score: 0, source: 'record' }),
+		).toBe('testid(x)')
 		expect(
 			describeCandidateForLog({
 				kind: 'role',
@@ -119,7 +126,12 @@ describe('executor: 自愈写回（默认不写，applySelfHeals 是纯函数）
 		if (step?.kind === 'click') {
 			expect(step.target.candidates).toHaveLength(3)
 			const appended = step.target.candidates[2]
-			expect(appended).toMatchObject({ kind: 'css', value: '#submit-basic', source: 'ai', score: 101 })
+			expect(appended).toMatchObject({
+				kind: 'css',
+				value: '#submit-basic',
+				source: 'ai',
+				score: 101,
+			})
 			// 保持 score 升序（契约校验要求）
 			const scores = step.target.candidates.map((c) => c.score)
 			expect([...scores].sort((a, b) => a - b)).toEqual(scores)
@@ -159,7 +171,12 @@ describe('executor: 自愈写回（默认不写，applySelfHeals 是纯函数）
 			from: 'testid(submit-basic)',
 			at: '2024-01-01T00:00:00.000Z',
 			needsReview: false,
-			candidate: { kind: 'testid' as const, value: 'submit-basic', score: 0, source: 'ai' as const },
+			candidate: {
+				kind: 'testid' as const,
+				value: 'submit-basic',
+				score: 0,
+				source: 'ai' as const,
+			},
 		}
 		const next = applySelfHeals(flow, [heal])
 		const step = next.steps[0]

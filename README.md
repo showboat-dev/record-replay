@@ -54,6 +54,7 @@ docs/          架构契约（architecture.md）、spike 结论
 | ai（默认关闭） | ✅ | 46 单测（mock fetch）；脱敏/护栏/缓存/ref 生命周期 |
 | harness + CLI | ✅ | 站点清单/统计/HTML 报告；`rr harness` 6 站 18/18 通过 |
 | e2e（录→放 3 次） | ✅ | `e2e/record-play.test.ts` 通过 |
+| v0.2 新能力（标签页/对话框/下载/组合键/上传） | ✅ | `e2e/new-capabilities.test.ts` 6/6；5 条 smoke flow 回放通过 |
 
 ### 当前基线（`pnpm rr harness --runs 3 --sites local`）
 
@@ -78,6 +79,19 @@ P50 93ms / P95 354ms
 > 真实站点测试顺带抓到一个**只在 tsx 运行时才暴露的 bug**：esbuild `keepNames` 会在函数体里注入
 > `__name(...)`，函数被 `page.evaluate` 序列化进页面后抛 `__name is not defined`，导致 L2 全挂。
 > 已在 resolver/executor/recorder 三处注入页面级垫片修复（`NAME_KEEPALIVE_SOURCE`）。
+
+## v0.2 新增录放能力（多标签页 / 对话框 / 下载 / 组合键 / 上传）
+
+| 能力 | 说明 | 验收 flow |
+|---|---|---|
+| 多标签页 | `window.open` 新页自动编号（0=起点页），自动合成 `switchTab`；回放时切页 + `bringToFront` | `flows/smoke-tabs.json`（7 步） |
+| hover 菜单 | 鼠标停留 350ms 上报，只保留"有语义"的 hover（aria-haspopup 或随后点了别的元素） | `flows/smoke-hover.json`（2 步） |
+| 原生对话框 | 录制自动 accept 并插 `dialog` 步骤；回放 manual 模式消费 pending dialog | `flows/smoke-dialog.json`（4 步） |
+| 下载 | 触发下载的步骤自动补 `expect:download`，文件落到 `artifacts/.../downloads/` | `flows/smoke-upload-download.json` |
+| 上传 | file input 点击记 `upload` + `{{file_N}}` 变量（回放传真实路径） | 同上 |
+| 组合键 | 非 Shift 修饰键 → `key{modifiers}`（Ctrl/Cmd+A/C/V…） | `flows/smoke-combo.json`（2 步） |
+
+> 已知限制：文件路径浏览器不暴露（上传只能占位变量）；prompt 框只能记默认值；macOS 的 `Control+A` 不是全选（录制端忠实记录按键）；closed shadow 内的输入框仍只能点不能填。
 
 ## Studio（本地 Web 控制台，给业务人员用）
 

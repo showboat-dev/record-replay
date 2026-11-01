@@ -39,6 +39,7 @@ interface NormalizedOptions {
 	ambiguityThreshold: number
 	maxFingerprintMatches: number
 	elementWaitMs: number
+	elementWaitPollMs: number
 	baseUrl?: string
 	levels: ResolveLevel[]
 }
@@ -50,6 +51,7 @@ function withDefaults(options?: ResolveOptions): NormalizedOptions {
 		ambiguityThreshold: options?.ambiguityThreshold ?? 0.15,
 		maxFingerprintMatches: options?.maxFingerprintMatches ?? 80,
 		elementWaitMs: options?.elementWaitMs ?? 5000,
+		elementWaitPollMs: options?.elementWaitPollMs ?? 150,
 		baseUrl: options?.baseUrl,
 		levels: options?.levels ?? DEFAULT_LEVELS,
 	}
@@ -164,98 +166,146 @@ export async function resolve(target: ElementRef, ctx: ResolveContext): Promise<
 		}
 	}
 
-	// SPA/异步渲染：先等页面就绪 + 至少一个候选出现（真实站点上的关键健壮性差异）
+	// 页面就绪：已加载完立即返回（导航中最多等 elementWaitMs）
 	await waitForLoadState(scope, opts.elementWaitMs)
-	await waitForAnyCandidate(scope, target, opts.elementWaitMs, log)
 
 	const failures: string[] = []
 	let sawAmbiguous = false
 	let sawHidden = false
+	/** 上一轮 L1/L2 的最终错误码，决定要不要再做"等元素出现"的第二轮 */
+	let lastLocalCode: string | undefined
 
-	for (const level of opts.levels) {
-		if (level === 'L3') {
-			log('L3（nodePath 容错）按计划 M1 未实现，跳过')
-			continue
-		}
-
-		if (level === 'L1') {
-			try {
-				const hit = await resolveL1(
-					target,
-					scope,
-					{
-						requireVisible: opts.requireVisible,
-						ambiguityThreshold: opts.ambiguityThreshold,
-					},
-					log,
-				)
-				return {
-					locator: hit.locator,
-					level: 'L1',
-					score: hit.score,
-					ambiguous: false,
-					frameDepth,
-					reason: `L1 ${hit.candidate.kind} 唯一命中`,
-				}
-			} catch (err) {
-				if (!(err instanceof ElementNotFoundError)) throw err
-				if (err.code === 'INVALID_REF') throw err
-				if (err.code === 'AMBIGUOUS') sawAmbiguous = true
-				if (err.code === 'HIDDEN') sawHidden = true
-				failures.push(`L1 ${err.code}: ${err.message}`)
-				log(`L1 失败（${err.code}）：${err.message}`)
-			}
-			continue
-		}
-
-		if (level === 'L2') {
-			try {
-				const hit = await resolveL2(
-					target,
-					scope,
-					{
-						requireVisible: opts.requireVisible,
-						ambiguityThreshold: opts.ambiguityThreshold,
-						maxFingerprintMatches: opts.maxFingerprintMatches,
-					},
-					log,
-				)
-				return {
-					locator: hit.locator,
-					level: 'L2',
-					score: hit.score,
-					// L1 歧义后靠指纹定下来：结果可用，但必须让上层知道"签名本身有歧义"
-					ambiguous: sawAmbiguous,
-					strategy: hit.strategy,
-					frameDepth,
-					reason:
-						`L2 ${hit.strategy} 命中（候选池 ${hit.matched}）` +
-						(sawAmbiguous ? '；L1 曾歧义，已降级' : ''),
-					release: hit.release,
-				}
-			} catch (err) {
-				if (!(err instanceof ElementNotFoundError)) throw err
-				if (err.code === 'AMBIGUOUS') sawAmbiguous = true
-				if (err.code === 'HIDDEN') sawHidden = true
-				failures.push(`L2 ${err.code}: ${err.message}`)
-				log(`L2 失败（${err.code}）：${err.message}`)
-			}
-			continue
-		}
-
-		if (level === 'L4') {
-			if (!ctx.repair || !opts.allowAi) {
-				log('L4 跳过：未注入 AI repair（默认关闭）')
+	/**
+	 * 一轮本地解析：L1（含 HIDDEN 轮询重试）→ L2 指纹。
+	 * 命中就返回结果；没命中把原因记进 failures 并返回 undefined。
+	 *
+	 * 两轮调用的原因：第一轮**不**做"等元素出现"的长轮询，快速路径（L2 兜底、
+	 * 元素确实不存在）不会白等 elementWaitMs；只有两轮都空手时才等 SPA 首屏。
+	 */
+	const attemptLocal = async (): Promise<ResolveResult | undefined> => {
+		for (const level of opts.levels) {
+			if (level === 'L3') {
+				log('L3（nodePath 容错）按计划 M1 未实现，跳过')
 				continue
 			}
-			const reason = failures.join(' | ')
-			try {
-				const locator = await ctx.repair(target, reason)
-				if (!locator) {
-					failures.push('L4 AI 未能给出定位')
-					log('L4 失败：AI 返回空')
-					continue
+
+			if (level === 'L1') {
+				// HIDDEN（命中但不可见）在 elementWaitMs 内轮询重试：
+				// 典型场景是 hover 展开菜单 / 动画结束后按钮才可见，命中瞬间 isVisible()===false。
+				// 重试期间保留最后一次 HIDDEN 原因，超时后按 HIDDEN 失败（不会被"吃掉"成 timeout）。
+				const hiddenDeadline = Date.now() + Math.max(0, opts.elementWaitMs)
+				let hit: Awaited<ReturnType<typeof resolveL1>> | undefined
+				let lastError: ElementNotFoundError | undefined
+				for (;;) {
+					try {
+						hit = await resolveL1(
+							target,
+							scope,
+							{
+								requireVisible: opts.requireVisible,
+								ambiguityThreshold: opts.ambiguityThreshold,
+							},
+							log,
+						)
+						break
+					} catch (err) {
+						if (!(err instanceof ElementNotFoundError)) throw err
+						if (err.code === 'INVALID_REF') throw err
+						if (err.code === 'HIDDEN' && Date.now() < hiddenDeadline) {
+							log(
+								`L1 命中但不可见（${err.message}），${opts.elementWaitPollMs}ms 后重试` +
+									`（剩余 ${Math.max(0, hiddenDeadline - Date.now())}ms）`,
+							)
+							await new Promise((resolveSleep) =>
+								setTimeout(resolveSleep, opts.elementWaitPollMs),
+							)
+							continue
+						}
+						lastError = err
+						break
+					}
 				}
+				if (hit) {
+					return {
+						locator: hit.locator,
+						level: 'L1',
+						score: hit.score,
+						ambiguous: false,
+						frameDepth,
+						reason: `L1 ${hit.candidate.kind} 唯一命中`,
+					}
+				}
+				if (lastError) {
+					lastLocalCode = lastError.code
+					if (lastError.code === 'AMBIGUOUS') sawAmbiguous = true
+					if (lastError.code === 'HIDDEN') sawHidden = true
+					const detail = `L1 ${lastError.code}: ${lastError.message}`
+					if (!failures.includes(detail)) failures.push(detail)
+					log(`L1 失败（${lastError.code}）：${lastError.message}`)
+				}
+				continue
+			}
+
+			if (level === 'L2') {
+				try {
+					const hit = await resolveL2(
+						target,
+						scope,
+						{
+							requireVisible: opts.requireVisible,
+							ambiguityThreshold: opts.ambiguityThreshold,
+							maxFingerprintMatches: opts.maxFingerprintMatches,
+						},
+						log,
+					)
+					return {
+						locator: hit.locator,
+						level: 'L2',
+						score: hit.score,
+						// L1 歧义后靠指纹定下来：结果可用，但必须让上层知道"签名本身有歧义"
+						ambiguous: sawAmbiguous,
+						strategy: hit.strategy,
+						frameDepth,
+						reason:
+							`L2 ${hit.strategy} 命中（候选池 ${hit.matched}）` +
+							(sawAmbiguous ? '；L1 曾歧义，已降级' : ''),
+						release: hit.release,
+					}
+				} catch (err) {
+					if (!(err instanceof ElementNotFoundError)) throw err
+					lastLocalCode = err.code
+					if (err.code === 'AMBIGUOUS') sawAmbiguous = true
+					if (err.code === 'HIDDEN') sawHidden = true
+					const detail = `L2 ${err.code}: ${err.message}`
+					if (!failures.includes(detail)) failures.push(detail)
+					log(`L2 失败（${err.code}）：${err.message}`)
+				}
+				continue
+			}
+		}
+		return undefined
+	}
+
+	// 第一轮：快速路径（不等待元素出现）
+	let resolved = await attemptLocal()
+
+	// 第二轮：只有第一轮"没找到元素"（而不是命中但不可见/歧义）时才值得等 SPA 首屏。
+	// HIDDEN 已经在 L1 里把 elementWaitMs 用完了，再等一遍纯属浪费时间。
+	if (!resolved && lastLocalCode !== 'HIDDEN') {
+		await waitForAnyCandidate(scope, target, opts.elementWaitMs, log)
+		resolved = await attemptLocal()
+	}
+	if (resolved) return resolved
+
+	// L4：AI 兜底（默认关闭，由 executor 决定是否注入 repair）
+	if (opts.levels.includes('L4') && ctx.repair && opts.allowAi) {
+		const reason = failures.join(' | ')
+		try {
+			const locator = await ctx.repair(target, reason)
+			if (!locator) {
+				failures.push('L4 AI 未能给出定位')
+				log('L4 失败：AI 返回空')
+			} else {
 				await validateAiLocator(locator, target, 5_000)
 				return {
 					locator,
@@ -266,13 +316,14 @@ export async function resolve(target: ElementRef, ctx: ResolveContext): Promise<
 					frameDepth,
 					reason: 'L4 AI 兜底命中（建议写回并复核）',
 				}
-			} catch (err) {
-				const message = err instanceof Error ? err.message : String(err)
-				failures.push(`L4 AI_FAILED: ${message}`)
-				log(`L4 失败（AI_FAILED）：${message}`)
 			}
-			continue
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			failures.push(`L4 AI_FAILED: ${message}`)
+			log(`L4 失败（AI_FAILED）：${message}`)
 		}
+	} else if (opts.levels.includes('L4')) {
+		log('L4 跳过：未注入 AI repair（默认关闭）')
 	}
 
 	const code = sawAmbiguous ? 'AMBIGUOUS' : sawHidden ? 'HIDDEN' : 'NO_MATCH'

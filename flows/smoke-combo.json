@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxqk1xz_kahc22",
+  "title": "/basic",
+  "version": 1,
+  "createdAt": "2026-11-01T11:17:32.996Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5173/basic",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "full-name",
+            "name": "fullName",
+            "type": "text",
+            "autocomplete": "name",
+            "placeholder": "请输入姓名",
+            "data-testid": "field-full-name"
+          },
+          "rect": {
+            "x": 327,
+            "y": 243.95,
+            "width": 786,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531852868
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "field-full-name",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "姓名",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "姓名",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "姓名",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#full-name",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"fullName\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"请输入姓名\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "姓名",
+          "attrs": {
+            "id": "full-name",
+            "name": "fullName",
+            "type": "text",
+            "placeholder": "请输入姓名",
+            "data-testid": "field-full-name"
+          },
+          "stableHash": "6f8a8db7f85710018eab7b0060bf31e8f6a4e5ec",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #full-name [testid=field-full-name] role=textbox name=\"姓名\"",
+        "nearbyText": [
+          "姓名",
+          "密码"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "value": "alice",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "key",
+      "key": "a",
+      "modifiers": [
+        "Control"
+      ],
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "full-name",
+            "name": "fullName",
+            "type": "text",
+            "autocomplete": "name",
+            "placeholder": "请输入姓名",
+            "data-testid": "field-full-name"
+          },
+          "rect": {
+            "x": 327,
+            "y": 243.95,
+            "width": 786,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793531852946
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "field-full-name",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "姓名",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "姓名",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "姓名",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#full-name",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"fullName\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"请输入姓名\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "姓名",
+          "attrs": {
+            "id": "full-name",
+            "name": "fullName",
+            "type": "text",
+            "placeholder": "请输入姓名",
+            "data-testid": "field-full-name"
+          },
+          "stableHash": "6f8a8db7f85710018eab7b0060bf31e8f6a4e5ec",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #full-name [testid=field-full-name] role=textbox name=\"姓名\"",
+        "nearbyText": [
+          "姓名",
+          "密码"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      }
+    }
+  ],
+  "selfHealed": []
+}

@@ -65,7 +65,14 @@ export function renderStep(step: Step, vars: Record<string, string>): Step {
 			clone.key = renderTemplateValue(clone.key, vars)
 			break
 		case 'upload':
+			// files 可能是 {{file}} 模板（业务人员上传本地文件时由变量注入绝对路径）
 			clone.files = clone.files.map((f) => renderTemplateValue(f, vars))
+			break
+		case 'dialog':
+			// prompt 的输入文本也可能来自变量（例如 {{name}}）
+			if (clone.promptText !== undefined) {
+				clone.promptText = renderTemplateValue(clone.promptText, vars)
+			}
 			break
 		case 'group':
 			clone.steps = clone.steps.map((s) => renderStep(s, vars))

@@ -162,6 +162,10 @@ function describeStep(step: Step): string {
 			return `extract   ${targetLabel(step.target)} → {{${step.into}}}`
 		case 'script':
 			return 'script    <inline>'
+		case 'dialog':
+			return `dialog    ${step.action}${step.promptText ? ` ← ${JSON.stringify(step.promptText)}` : ''}`
+		case 'switchTab':
+			return `switchTab 第 ${step.index + 1} 个标签页`
 		case 'group':
 			return pc.bold(`group     ${step.label}`)
 	}
@@ -247,6 +251,7 @@ async function playCmd(args: string[]): Promise<void> {
 		runs: { type: 'string', default: '1' },
 		headed: { type: 'boolean', default: false },
 		ai: { type: 'boolean', default: false },
+		headless: { type: 'boolean', default: false },
 		'write-back': { type: 'boolean', default: false },
 		artifacts: { type: 'string' },
 		json: { type: 'boolean', default: false },

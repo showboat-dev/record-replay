@@ -145,18 +145,20 @@ export interface HealInput extends SelfHealRecord {
  * 把自愈结果合并进 flow：version+1、selfHealed 追加、目标 step 的 candidates 末尾追加新候选。
  * 纯函数：返回新 flow，不落盘。
  */
-export function applySelfHeals(flow: import('@rr/schema').Flow, heals: HealInput[]): import('@rr/schema').Flow {
+export function applySelfHeals(
+	flow: import('@rr/schema').Flow,
+	heals: HealInput[],
+): import('@rr/schema').Flow {
 	const usable = heals.filter((h) => h.candidate !== undefined)
 	const nextSteps: Step[] = mapSteps(flow.steps, (step, stepId) => {
 		const heal = usable.find((h) => h.stepId === stepId)
 		if (!heal?.candidate) return step
 		if (!('target' in step) || !step.target) return step
 		const target = step.target
-		const maxScore = target.candidates.reduce(
-			(acc, candidate) => Math.max(acc, candidate.score),
-			0,
-		)
-		if (target.candidates.some((c) => candidateValueKey(c) === candidateValueKey(heal.candidate!))) {
+		const maxScore = target.candidates.reduce((acc, candidate) => Math.max(acc, candidate.score), 0)
+		if (
+			target.candidates.some((c) => candidateValueKey(c) === candidateValueKey(heal.candidate!))
+		) {
 			return step
 		}
 		const appended: Candidate = { ...heal.candidate, score: maxScore + 1 }
