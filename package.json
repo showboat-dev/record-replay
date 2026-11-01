@@ -15,7 +15,8 @@
     "harness": "tsx packages/harness/src/cli.ts",
     "verify": "pnpm typecheck && pnpm test && pnpm lint",
     "lint": "eslint packages fixtures --no-warn-ignored",
-    "format": "prettier --write \"packages/**/*.ts\" \"fixtures/**/*.{ts,js,html,css}\""
+    "format": "prettier --write \"packages/**/*.ts\" \"fixtures/**/*.{ts,js,html,css}\"",
+    "studio": "tsx packages/studio/src/main.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

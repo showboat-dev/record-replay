@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjyvhn_gqxvy6",
+  "id": "flow_mvxl73u4_oyyyds",
   "title": "/components/select",
   "version": 1,
-  "createdAt": "2026-11-01T08:13:11.658Z",
+  "createdAt": "2026-11-01T08:47:39.187Z",
   "meta": {
     "env": {
       "startUrl": "https://ant.design/components/select",
@@ -22,83 +22,6 @@
   "steps": [
     {
       "id": "s1",
-      "expect": {
-        "kind": "elementVisible",
-        "target": {
-          "observed": {
-            "tag": "div",
-            "attributes": {
-              "role": "listbox",
-              "id": "_R_7bbqfsua__list"
-            },
-            "text": "6.6.85.x4.x3.x2.x1.x0.12.x0.11.x0.10.x0.9.x",
-            "rect": {
-              "x": 1193.98,
-              "y": 51,
-              "width": 80,
-              "height": 320
-            },
-            "scroll": {
-              "x": 0,
-              "y": 0
-            },
-            "viewport": {
-              "width": 1440,
-              "height": 900
-            },
-            "dpr": 1,
-            "recordedAt": 1793520790769
-          },
-          "candidates": [
-            {
-              "kind": "text",
-              "value": "6.6.85.x4.x3.x2.x1.x0.12.x0.11.x0.10.x0.9.x",
-              "score": 70,
-              "source": "record"
-            },
-            {
-              "kind": "css",
-              "value": "#_R_7bbqfsua__list",
-              "score": 100,
-              "source": "record"
-            },
-            {
-              "kind": "xpath",
-              "value": "/html/*[2]/*[2]/*[1]/*[1]/*[1]/*[2]/*[1]/*[10]/*[1]/*[1]/*[1]/*[1]/*[1]",
-              "score": 900,
-              "source": "record"
-            }
-          ],
-          "fingerprint": {
-            "tag": "div",
-            "role": "listbox",
-            "attrs": {
-              "role": "listbox",
-              "id": "_R_7bbqfsua__list"
-            },
-            "stableHash": "7548f7f0fd1e10badf0e57e5392a696e0fe2d3d3",
-            "nodePath": [
-              1,
-              1,
-              0,
-              0,
-              0,
-              1,
-              0,
-              9,
-              0,
-              0,
-              0,
-              0,
-              0
-            ]
-          },
-          "frame": {
-            "path": []
-          },
-          "description": "div #_R_7bbqfsua__list role=listbox text=\"6.6.85.x4.x3.x2.x1.x0.12.x0.11.x0.10.x0.…\""
-        }
-      },
       "kind": "click",
       "target": {
         "observed": {
@@ -131,7 +54,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520790662
+          "recordedAt": 1793522858143
         },
         "candidates": [
           {
@@ -187,102 +110,22 @@
     },
     {
       "id": "s2",
-      "expect": {
-        "kind": "elementVisible",
-        "target": {
-          "observed": {
-            "tag": "a",
-            "attributes": {
-              "href": "/components/tree-select"
-            },
-            "text": "TreeSelect",
-            "rect": {
-              "x": 44,
-              "y": 1952,
-              "width": 223.98,
-              "height": 40
-            },
-            "scroll": {
-              "x": 0,
-              "y": 0
-            },
-            "viewport": {
-              "width": 1440,
-              "height": 900
-            },
-            "dpr": 1,
-            "recordedAt": 1793520791599
-          },
-          "candidates": [
-            {
-              "kind": "role",
-              "value": {
-                "role": "link",
-                "name": "TreeSelect",
-                "exact": true
-              },
-              "score": 30,
-              "source": "record"
-            },
-            {
-              "kind": "role",
-              "value": {
-                "role": "link",
-                "name": "TreeSelect",
-                "exact": false
-              },
-              "score": 36,
-              "source": "record"
-            },
-            {
-              "kind": "xpath",
-              "value": "/html/*[2]/*[2]/*[1]/*[2]/*[1]/*[1]/*[6]/*[2]/*[17]/*[1]/*[1]",
-              "score": 900,
-              "source": "record"
-            }
-          ],
-          "fingerprint": {
-            "tag": "a",
-            "role": "link",
-            "accessibleName": "TreeSelect",
-            "attrs": {},
-            "stableHash": "b6ee5e2a15ed0182b1cd130b5291f1a875c2d714",
-            "nodePath": [
-              1,
-              1,
-              0,
-              1,
-              0,
-              0,
-              5,
-              1,
-              16,
-              0,
-              0
-            ]
-          },
-          "frame": {
-            "path": []
-          },
-          "description": "a role=link name=\"TreeSelect\""
-        }
-      },
       "kind": "click",
       "target": {
         "observed": {
           "tag": "input",
           "attributes": {
-            "id": "_R_ihekmbjqfsua_",
-            "type": "text",
+            "id": "_r_130_",
             "readonly": "",
             "autocomplete": "new-password",
             "role": "combobox",
             "aria-expanded": "true",
             "aria-haspopup": "listbox",
             "aria-autocomplete": "list",
-            "aria-owns": "_R_ihekmbjqfsua__list",
-            "aria-controls": "_R_ihekmbjqfsua__list",
-            "aria-activedescendant": "_R_ihekmbjqfsua__list_1"
+            "type": "text",
+            "aria-owns": "_r_130__list",
+            "aria-controls": "_r_130__list",
+            "aria-activedescendant": "_r_130__list_1"
           },
           "rect": {
             "x": 384.98,
@@ -299,12 +142,12 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520791516
+          "recordedAt": 1793522859104
         },
         "candidates": [
           {
             "kind": "css",
-            "value": "#_R_ihekmbjqfsua_",
+            "value": "#_r_130_",
             "score": 100,
             "source": "record"
           },
@@ -319,11 +162,11 @@
           "tag": "input",
           "role": "combobox",
           "attrs": {
-            "id": "_R_ihekmbjqfsua_",
-            "type": "text",
-            "role": "combobox"
+            "id": "_r_130_",
+            "role": "combobox",
+            "type": "text"
           },
-          "stableHash": "7d8099c396218612938b34ea1cf4ee20a8499075",
+          "stableHash": "8818d2623c33b14acc7abe5ca84e302ed749e6c8",
           "nodePath": [
             1,
             1,
@@ -347,7 +190,7 @@
         "frame": {
           "path": []
         },
-        "description": "input #_R_ihekmbjqfsua_ role=combobox",
+        "description": "input #_r_130_ role=combobox",
         "nearbyText": [
           "Lucy"
         ],

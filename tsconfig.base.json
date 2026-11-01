@@ -20,7 +20,8 @@
       "@rr/resolver": ["packages/resolver/src/index.ts"],
       "@rr/executor": ["packages/executor/src/index.ts"],
       "@rr/ai": ["packages/ai/src/index.ts"],
-      "@rr/harness": ["packages/harness/src/index.ts"]
+      "@rr/harness": ["packages/harness/src/index.ts"],
+      "@rr/studio": ["packages/studio/src/index.ts"]
     }
   }
 }

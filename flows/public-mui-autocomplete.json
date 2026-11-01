@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjm7aw_wylz3k",
+  "id": "flow_mvxl7fq6_5kcrh3",
   "title": "/material-ui/react-autocomplete/",
   "version": 1,
-  "createdAt": "2026-11-01T08:03:19.717Z",
+  "createdAt": "2026-11-01T08:47:50.869Z",
   "meta": {
     "env": {
       "startUrl": "https://mui.com/material-ui/react-autocomplete/",
@@ -50,7 +50,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520199475
+          "recordedAt": 1793522870620
         },
         "candidates": [
           {
@@ -134,7 +134,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520199602
+          "recordedAt": 1793522870754
         },
         "candidates": [
           {
@@ -216,7 +216,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520198835
+          "recordedAt": 1793522869952
         },
         "candidates": [
           {
@@ -240,9 +240,9 @@
             "source": "record"
           },
           {
-            "kind": "xpath",
-            "value": "/html/*[2]/*[2]/*[2]/*[3]/*[1]/*[1]/*[12]/*[2]/*[3]/*[1]/*[2]/*[1]",
-            "score": 900,
+            "kind": "css",
+            "value": "li.MuiAutocomplete-option.Mui-focused",
+            "score": 650,
             "source": "record"
           }
         ],

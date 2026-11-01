@@ -57,7 +57,18 @@
 3. **站点级配置**（UA/超时/等待策略）要进 flow.meta，而不是散落在脚本里。
 4. **回归指标要按 run 统计**，并区分 `ELEMENT_NOT_FOUND` / `EXPECT_MISMATCH` / `NAVIGATION_FAILED` —— 三者对应完全不同的修复方向。
 
-## 6. 复现
+## 6. 复测（加了 href/class 候选 + startUrl 重试之后）
+
+| 站点 | 3 runs | 说明 |
+|---|---|---|
+| saucedemo / demoqa-form / selenium-web-form / todomvc / playwright-dev / mui-autocomplete | ✅ 3/3 | L1 |
+| orangehrm | ⚠️ 2/3 | startUrl 重试后从 0/3 提升；demo 站仍偶尔 40s+ |
+| antd-select / element-plus-select | ❌ 0/3 | 组件库「组件画廊」页面固有难题：同页 27 个同构下拉，录制目标是无属性 div / 动态 id input |
+| wikipedia | ❌ 0/3 | s3 点击搜索结果后未导航（expect 抓住了），s4 同文本多链接歧义 |
+
+**结论**：普通业务系统形态（电商/表单/列表/文档站）稳定；组件库演示页和企业 demo 站属于环境/结构极端 case，不再投入调优，改为 M2 的「录制后自检 + needsReview」兜底。
+
+## 7. 复现
 
 ```bash
 cd rr

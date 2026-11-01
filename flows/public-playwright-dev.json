@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjnkzx_8tpvlt",
+  "id": "flow_mvxl70wu_qe38uo",
   "title": "playwright.dev",
   "version": 1,
-  "createdAt": "2026-11-01T08:04:21.632Z",
+  "createdAt": "2026-11-01T08:47:29.823Z",
   "meta": {
     "env": {
       "startUrl": "https://playwright.dev/",
@@ -49,13 +49,25 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520260284
+          "recordedAt": 1793522848475
         },
         "candidates": [
           {
             "kind": "text",
             "value": "Docs",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a[href=\"/docs/intro\"]",
+            "score": 300,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a.navbar__item.navbar__link",
+            "score": 650,
             "source": "record"
           },
           {
@@ -121,7 +133,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520261571
+          "recordedAt": 1793522849757
         },
         "candidates": [
           {

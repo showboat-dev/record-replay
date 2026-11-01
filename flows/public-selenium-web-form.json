@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjmu0v_gbmciu",
+  "id": "flow_mvxl6fhd_9livhc",
   "title": "/selenium/web/web-form.html",
   "version": 1,
-  "createdAt": "2026-11-01T08:03:46.613Z",
+  "createdAt": "2026-11-01T08:47:00.800Z",
   "meta": {
     "env": {
       "startUrl": "https://www.selenium.dev/selenium/web/web-form.html",
@@ -53,7 +53,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520225079
+          "recordedAt": 1793522819230
         },
         "candidates": [
           {
@@ -75,9 +75,9 @@
             "source": "record"
           },
           {
-            "kind": "xpath",
-            "value": "/html/*[2]/*[1]/*[1]/*[2]/*[1]/*[1]/*[1]/*[1]",
-            "score": 900,
+            "kind": "css",
+            "value": "input.form-control",
+            "score": 650,
             "source": "record"
           }
         ],
@@ -137,7 +137,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520225100
+          "recordedAt": 1793522819249
         },
         "candidates": [
           {
@@ -150,6 +150,12 @@
             "kind": "css",
             "value": "input[name=\"my-password\"]",
             "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.form-control",
+            "score": 650,
             "source": "record"
           },
           {
@@ -212,7 +218,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520225104
+          "recordedAt": 1793522819253
         },
         "candidates": [
           {
@@ -225,6 +231,12 @@
             "kind": "css",
             "value": "textarea[name=\"my-textarea\"]",
             "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "textarea.form-control",
+            "score": 650,
             "source": "record"
           },
           {
@@ -287,7 +299,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520225107
+          "recordedAt": 1793522819255
         },
         "candidates": [
           {
@@ -300,6 +312,12 @@
             "kind": "css",
             "value": "select[name=\"my-select\"]",
             "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "select.form-select",
+            "score": 650,
             "source": "record"
           },
           {
@@ -365,13 +383,19 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520225435
+          "recordedAt": 1793522819566
         },
         "candidates": [
           {
             "kind": "text",
             "value": "Submit",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button.btn.btn-outline-primary",
+            "score": 650,
             "source": "record"
           },
           {

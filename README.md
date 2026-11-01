@@ -79,6 +79,18 @@ P50 93ms / P95 354ms
 > `__name(...)`，函数被 `page.evaluate` 序列化进页面后抛 `__name is not defined`，导致 L2 全挂。
 > 已在 resolver/executor/recorder 三处注入页面级垫片修复（`NAME_KEEPALIVE_SOURCE`）。
 
+## Studio（本地 Web 控制台，给业务人员用）
+
+```bash
+pnpm studio          # http://127.0.0.1:4400
+```
+
+- 顶部填网址 → 开始录制（打开受控 Chromium，用户正常操作）→ 停止并保存
+- 停止后自动**自检**（回放一次），失败步骤标红并给人话原因
+- 左侧流程列表、右侧步骤时间线（截图/命中级别/耗时），支持重命名、删除步骤
+- 回放面板：填变量（secret 用密码框）→ 回放 → 每步状态 + 失败原因
+- 契约：[docs/studio-api.md](docs/studio-api.md)
+
 ## 公网复杂站点语料库（10 站）
 
 见 [docs/public-corpus.md](docs/public-corpus.md)：**6/10 站点全绿、20/30 runs 通过（66.7%）**，51 步链路覆盖电商/企业后台/表单/动态列表/搜索/组件库/文档站。

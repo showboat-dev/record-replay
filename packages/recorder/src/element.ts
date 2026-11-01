@@ -28,6 +28,8 @@ export const SCORE = {
 	label: 50,
 	text: 70,
 	textPartial: 76,
+	cssHref: 300,
+	cssClass: 650,
 	cssId: 100,
 	cssAttr: 150,
 	cssPath: 300,
@@ -159,9 +161,13 @@ export function stableHashOf(input: {
 		.map((key) => `${key}=${input.attrs[key]}`)
 		.join('&')
 	const pathPart = (input.nodePath ?? []).join('.')
-	const payload = [input.tag, input.role ?? '', input.accessibleName ?? '', attrPart, pathPart].join(
-		'\u0000',
-	)
+	const payload = [
+		input.tag,
+		input.role ?? '',
+		input.accessibleName ?? '',
+		attrPart,
+		pathPart,
+	].join('\u0000')
 	return createHash('sha1').update(payload).digest('hex')
 }
 
@@ -197,7 +203,8 @@ export function deriveCandidates(input: RawElementFacts): Candidate[] {
 		const value = attrs[attr]
 		if (!value) continue
 		// 只有 data-testid 能走 getByTestId（默认 testIdAttributeName）；其余走 css
-		if (attr === 'data-testid') out.push({ kind: 'testid', value, score: SCORE.testid, source: 'record' })
+		if (attr === 'data-testid')
+			out.push({ kind: 'testid', value, score: SCORE.testid, source: 'record' })
 		else
 			out.push({
 				kind: 'css',
@@ -226,7 +233,12 @@ export function deriveCandidates(input: RawElementFacts): Candidate[] {
 			})
 		} else {
 			// 无名字的 role 也留着：至少能在 L2 兜底时限定元素集合
-			out.push({ kind: 'role', value: { role: input.role }, score: SCORE.roleInexact + 10, source: 'record' })
+			out.push({
+				kind: 'role',
+				value: { role: input.role },
+				score: SCORE.roleInexact + 10,
+				source: 'record',
+			})
 		}
 	}
 
@@ -240,9 +252,26 @@ export function deriveCandidates(input: RawElementFacts): Candidate[] {
 		out.push({ kind: 'text', value: text, score: SCORE.text, source: 'record' })
 	}
 
+	// 4.5) 链接 href（真实站点上比「文本」稳：同文本的链接可能很多）
+	const href = attrs['href']
+	if (tag === 'a' && href && isStableHref(href)) {
+		out.push({
+			kind: 'css',
+			value: `a[href=${quoteAttr(href)}]`,
+			score: SCORE.cssHref,
+			source: 'record',
+		})
+	}
+
+	// 4.6) 稳定 class（组件库/企业后台常见；动态 token 会被过滤）
+	const classSelector = classSelectorOf(tag, input.className)
+	if (classSelector)
+		out.push({ kind: 'css', value: classSelector, score: SCORE.cssClass, source: 'record' })
+
 	// 5) css
 	const id = attrs['id']
-	if (id && !isDynamicValue(id)) out.push({ kind: 'css', value: `#${cssIdent(id)}`, score: SCORE.cssId, source: 'record' })
+	if (id && !isDynamicValue(id))
+		out.push({ kind: 'css', value: `#${cssIdent(id)}`, score: SCORE.cssId, source: 'record' })
 	const nameAttr = attrs['name']
 	if (nameAttr && !isDynamicValue(nameAttr))
 		out.push({
@@ -300,7 +329,11 @@ export function dedupeCandidates(candidates: Candidate[]): Candidate[] {
 export function sortCandidates(candidates: Candidate[]): Candidate[] {
 	return candidates
 		.map((candidate, index) => ({ candidate, index }))
-		.sort((a, b) => (a.candidate.score === b.candidate.score ? a.index - b.index : a.candidate.score - b.candidate.score))
+		.sort((a, b) =>
+			a.candidate.score === b.candidate.score
+				? a.index - b.index
+				: a.candidate.score - b.candidate.score,
+		)
 		.map((entry) => entry.candidate)
 }
 
@@ -361,3 +394,27 @@ function round(value: number): number {
 	return Math.round(value * 100) / 100
 }
 
+/** href 是否稳定到可以做精确选择器（排除 javascript:、纯锚点、含随机段） */
+function isStableHref(href: string): boolean {
+	if (!href) return false
+	if (/^(#|javascript:|mailto:|tel:)/i.test(href)) return false
+	if (href.length > 180) return false
+	if (/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(href)) return false
+	return true
+}
+
+/** 过滤动态 class token（CSS-in-JS hash、React scoped、长数字等），最多取两个稳定 token */
+function classSelectorOf(tag: string, className: string | undefined): string | undefined {
+	if (!className) return undefined
+	const tokens = className
+		.split(/\s+/)
+		.map((t) => t.trim())
+		.filter(Boolean)
+		.filter((t) => t.length >= 2 && t.length <= 40)
+		.filter((t) => !/^[_a-z]?[0-9a-f]{6,}$/i.test(t)) // css hash 类
+		.filter((t) => !/\d{3,}/.test(t)) // 长数字（日期/计数）
+		.filter((t) => !/^(css|sc|jsx|emotion|svelte)-/i.test(t))
+	const picked = tokens.slice(0, 2)
+	if (!picked.length) return undefined
+	return `${tag}.${picked.map((t) => t.replace(/([:./[\]])/g, '\\$1')).join('.')}`
+}

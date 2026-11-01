@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxkc2j8_5b4q7x",
+  "id": "flow_mvxl6hfx_25eiwk",
   "title": "/todomvc/",
   "version": 1,
-  "createdAt": "2026-11-01T08:23:25.035Z",
+  "createdAt": "2026-11-01T08:47:04.213Z",
   "meta": {
     "env": {
       "startUrl": "https://demo.playwright.dev/todomvc/#/",
@@ -44,7 +44,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404210
+          "recordedAt": 1793522823403
         },
         "candidates": [
           {
@@ -71,6 +71,12 @@
             "kind": "css",
             "value": "input[placeholder=\"What needs to be done?\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.new-todo",
+            "score": 650,
             "source": "record"
           },
           {
@@ -136,7 +142,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404320
+          "recordedAt": 1793522823515
         },
         "candidates": [
           {
@@ -163,6 +169,12 @@
             "kind": "css",
             "value": "input[placeholder=\"What needs to be done?\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.new-todo",
+            "score": 650,
             "source": "record"
           },
           {
@@ -225,7 +237,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404419
+          "recordedAt": 1793522823613
         },
         "candidates": [
           {
@@ -252,6 +264,12 @@
             "kind": "css",
             "value": "input[placeholder=\"What needs to be done?\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.new-todo",
+            "score": 650,
             "source": "record"
           },
           {
@@ -317,7 +335,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404521
+          "recordedAt": 1793522823714
         },
         "candidates": [
           {
@@ -344,6 +362,12 @@
             "kind": "css",
             "value": "input[placeholder=\"What needs to be done?\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.new-todo",
+            "score": 650,
             "source": "record"
           },
           {
@@ -406,7 +430,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404635
+          "recordedAt": 1793522823814
         },
         "candidates": [
           {
@@ -433,6 +457,12 @@
             "kind": "css",
             "value": "input[placeholder=\"What needs to be done?\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.new-todo",
+            "score": 650,
             "source": "record"
           },
           {
@@ -498,7 +528,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404737
+          "recordedAt": 1793522823914
         },
         "candidates": [
           {
@@ -525,6 +555,12 @@
             "kind": "css",
             "value": "input[placeholder=\"What needs to be done?\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.new-todo",
+            "score": 650,
             "source": "record"
           },
           {
@@ -588,13 +624,19 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521402936
+          "recordedAt": 1793522822131
         },
         "candidates": [
           {
             "kind": "label",
             "value": "Toggle Todo",
             "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.toggle",
+            "score": 650,
             "source": "record"
           },
           {
@@ -663,7 +705,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404869
+          "recordedAt": 1793522824048
         },
         "candidates": [
           {
@@ -757,7 +799,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793521404971
+          "recordedAt": 1793522824147
         },
         "candidates": [
           {
@@ -778,6 +820,12 @@
               "exact": false
             },
             "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a.selected",
+            "score": 650,
             "source": "record"
           },
           {

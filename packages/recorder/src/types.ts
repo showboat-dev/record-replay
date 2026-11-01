@@ -23,6 +23,8 @@ export interface RawElementFacts {
 	 */
 	uid?: string
 	tag: string
+	/** 元素 class（截断 200 字；Node 侧筛掉动态 token 后才用于生成 css 候选） */
+	className?: string
 	/** 属性白名单（不含 class/style/data-rr-uid、不含 value 等可能含隐私的值） */
 	attributes: Record<string, string>
 	/** 元素可见文本（已折叠空白、截断 200 字） */
@@ -68,14 +70,7 @@ export interface RawElementFacts {
 /* ------------------------------------------------------------------ */
 
 export type RawEventKind =
-	| 'click'
-	| 'pointerdown'
-	| 'contextmenu'
-	| 'keydown'
-	| 'input'
-	| 'change'
-	| 'scroll'
-	| 'navigation'
+	'click' | 'pointerdown' | 'contextmenu' | 'keydown' | 'input' | 'change' | 'scroll' | 'navigation'
 
 /** 各事件类型的特有字段（页面 → Node 原样回传） */
 export interface RawEventData {
@@ -130,14 +125,7 @@ export interface RawEvent {
 /* ------------------------------------------------------------------ */
 
 export type CoalescedActionKind =
-	| 'navigate'
-	| 'click'
-	| 'input'
-	| 'select'
-	| 'key'
-	| 'scroll'
-	| 'hover'
-	| 'unknown'
+	'navigate' | 'click' | 'input' | 'select' | 'key' | 'scroll' | 'hover' | 'unknown'
 
 /** 一个可落成 Step 的动作（500ms 缓冲合流之后） */
 export interface CoalescedAction {

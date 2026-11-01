@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjynaj_c8orno",
+  "id": "flow_mvxl6mcy_eoh2tp",
   "title": "/web/index.php/auth/login",
   "version": 1,
-  "createdAt": "2026-11-01T08:13:06.141Z",
+  "createdAt": "2026-11-01T08:47:26.033Z",
   "meta": {
     "env": {
       "startUrl": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login",
@@ -40,7 +40,7 @@
           },
           "rect": {
             "x": 333.5,
-            "y": 441.5,
+            "y": 461.27,
             "width": 485,
             "height": 45
           },
@@ -53,7 +53,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520779616
+          "recordedAt": 1793522834759
         },
         "candidates": [
           {
@@ -66,6 +66,12 @@
             "kind": "css",
             "value": "input[placeholder=\"Username\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.oxd-input.oxd-input--focus",
+            "score": 650,
             "source": "record"
           },
           {
@@ -120,7 +126,7 @@
           },
           "rect": {
             "x": 333.5,
-            "y": 528.89,
+            "y": 548.66,
             "width": 485,
             "height": 45
           },
@@ -133,7 +139,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520779637
+          "recordedAt": 1793522834778
         },
         "candidates": [
           {
@@ -146,6 +152,12 @@
             "kind": "css",
             "value": "input[placeholder=\"Password\"]",
             "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input.oxd-input.oxd-input--focus",
+            "score": 650,
             "source": "record"
           },
           {
@@ -205,7 +217,7 @@
           "text": "Login",
           "rect": {
             "x": 333.5,
-            "y": 605.89,
+            "y": 625.66,
             "width": 485,
             "height": 46
           },
@@ -218,13 +230,19 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520779661
+          "recordedAt": 1793522834809
         },
         "candidates": [
           {
             "kind": "text",
             "value": "Login",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button.oxd-button.oxd-button--medium",
+            "score": 650,
             "source": "record"
           },
           {
@@ -289,13 +307,25 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520782136
+          "recordedAt": 1793522840726
         },
         "candidates": [
           {
             "kind": "text",
             "value": "My Info",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a[href=\"/web/index.php/pim/viewMyDetails\"]",
+            "score": 300,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a.oxd-main-menu-item",
+            "score": 650,
             "source": "record"
           },
           {
@@ -357,13 +387,25 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520784236
+          "recordedAt": 1793522844201
         },
         "candidates": [
           {
             "kind": "text",
             "value": "Contact Details",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a[href=\"/web/index.php/pim/contactDetails/empNumber/7\"]",
+            "score": 300,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a.orangehrm-tabs-item",
+            "score": 650,
             "source": "record"
           },
           {

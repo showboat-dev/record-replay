@@ -15,6 +15,34 @@ interface Sample {
 
 const samples: Sample[] = [
 	{
+		route: '/basic',
+		drive: async (page) => {
+			await page.getByTestId('field-full-name').fill('alice')
+			await page.getByTestId('field-email').fill('alice@example.com')
+			await page.getByTestId('submit-basic').click()
+			await page.waitForTimeout(300)
+		},
+	},
+	{
+		route: '/iframe-same',
+		drive: async (page) => {
+			const inner = page.frameLocator('#same-frame')
+			await inner.getByTestId('inner-name').fill('bob')
+			await inner.getByTestId('inner-submit').click()
+			await page.waitForTimeout(300)
+		},
+	},
+	{
+		route: '/shadow-closed',
+		drive: async (page) => {
+			// closed shadow 只能点到宿主：录制会记 host + 相对偏移，回放点 host 的同位置
+			await page.locator('x-closed-card').click()
+			await page.waitForTimeout(400)
+			await page.getByTestId('outside-btn').click()
+			await page.waitForTimeout(300)
+		},
+	},
+	{
 		route: '/custom-select',
 		drive: async (page) => {
 			await page.getByTestId('cs-trigger').click()
@@ -43,7 +71,9 @@ const samples: Sample[] = [
 
 async function main(): Promise<void> {
 	const only = process.argv.slice(2)
-	const targets = only.length ? samples.filter((s) => only.some((o) => s.route.includes(o))) : samples
+	const targets = only.length
+		? samples.filter((s) => only.some((o) => s.route.includes(o)))
+		: samples
 	if (!targets.length) throw new Error(`没有匹配的样本：${only.join(', ')}`)
 
 	for (const sample of targets) {

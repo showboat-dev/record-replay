@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjyzr0_rctpto",
+  "id": "flow_mvxl7b2d_mw4gs9",
   "title": "/en-US/component/select.html",
   "version": 1,
-  "createdAt": "2026-11-01T08:13:17.640Z",
+  "createdAt": "2026-11-01T08:47:45.231Z",
   "meta": {
     "env": {
       "startUrl": "https://element-plus.org/en-US/component/select.html",
@@ -22,73 +22,6 @@
   "steps": [
     {
       "id": "s1",
-      "expect": {
-        "kind": "elementVisible",
-        "target": {
-          "observed": {
-            "tag": "ul",
-            "attributes": {
-              "id": "el-id-1024-0",
-              "role": "listbox",
-              "aria-orientation": "vertical"
-            },
-            "text": "Option1Option2Option3Option4Option5",
-            "rect": {
-              "x": 357,
-              "y": 676,
-              "width": 238,
-              "height": 182
-            },
-            "scroll": {
-              "x": 0,
-              "y": 0
-            },
-            "viewport": {
-              "width": 1440,
-              "height": 900
-            },
-            "dpr": 1,
-            "recordedAt": 1793520793899
-          },
-          "candidates": [
-            {
-              "kind": "role",
-              "value": {
-                "role": "listbox"
-              },
-              "score": 46,
-              "source": "record"
-            },
-            {
-              "kind": "xpath",
-              "value": "/html/*[2]/*[1]/*[1]/*[1]/*[1]/*[1]/*[1]",
-              "score": 900,
-              "source": "record"
-            }
-          ],
-          "fingerprint": {
-            "tag": "ul",
-            "role": "listbox",
-            "attrs": {
-              "role": "listbox"
-            },
-            "stableHash": "96878cf2ee9fcbdd62bb68ff0c6cd5fcd2566233",
-            "nodePath": [
-              1,
-              0,
-              0,
-              0,
-              0,
-              0,
-              0
-            ]
-          },
-          "frame": {
-            "path": []
-          },
-          "description": "ul #el-id-1024-0 role=listbox text=\"Option1Option2Option3Option4Option5\""
-        }
-      },
       "kind": "click",
       "target": {
         "observed": {
@@ -110,7 +43,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520793803
+          "recordedAt": 1793522861412
         },
         "candidates": [
           {
@@ -157,71 +90,6 @@
     },
     {
       "id": "s2",
-      "expect": {
-        "kind": "elementVisible",
-        "target": {
-          "observed": {
-            "tag": "p",
-            "attributes": {
-              "data-v-89d0a259": ""
-            },
-            "text": "Pagination",
-            "rect": {
-              "x": 50,
-              "y": 1693.19,
-              "width": 166,
-              "height": 20
-            },
-            "scroll": {
-              "x": 0,
-              "y": 0
-            },
-            "viewport": {
-              "width": 1440,
-              "height": 900
-            },
-            "dpr": 1,
-            "recordedAt": 1793520797601
-          },
-          "candidates": [
-            {
-              "kind": "text",
-              "value": "Pagination",
-              "score": 70,
-              "source": "record"
-            },
-            {
-              "kind": "xpath",
-              "value": "/html/*[2]/*[2]/*[1]/*[5]/*[1]/*[1]/*[1]/*[2]/*[5]/*[12]/*[1]",
-              "score": 900,
-              "source": "record"
-            }
-          ],
-          "fingerprint": {
-            "tag": "p",
-            "role": "paragraph",
-            "attrs": {},
-            "stableHash": "21edea25e6559b5073a67dadca7bd290f7e220ee",
-            "nodePath": [
-              1,
-              1,
-              0,
-              4,
-              0,
-              0,
-              0,
-              1,
-              4,
-              11,
-              0
-            ]
-          },
-          "frame": {
-            "path": []
-          },
-          "description": "p role=paragraph text=\"Pagination\""
-        }
-      },
       "kind": "click",
       "target": {
         "observed": {
@@ -247,7 +115,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520794568
+          "recordedAt": 1793522862207
         },
         "candidates": [
           {
@@ -262,6 +130,12 @@
             "kind": "text",
             "value": "Option2",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "li.el-select-dropdown__item.is-selected",
+            "score": 650,
             "source": "record"
           },
           {

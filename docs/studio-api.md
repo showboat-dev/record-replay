@@ -1,0 +1,76 @@
+# Studio（本地 Web 控制台）API 契约 v0.1
+
+> 目标用户：业务人员。形态：本地 Node 服务 + 受控 Chromium + 单页 Web UI。
+> 启动：`pnpm studio`（默认 http://127.0.0.1:4400）
+
+## 页面结构（前端约定）
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  [URL 输入框]  [● 开始录制]   [停止并保存]   流程标题：____   │
+├──────────────────┬───────────────────────────────────────────┤
+│ 流程列表          │ 步骤时间线（录制中实时追加 / 选中流程展示）│
+│ · 登录并提交报销   │ 1. 打开 xxx            [截图缩略图]        │
+│ · 每月对账        │ 2. 输入「姓名」= Alice                      │
+│ ...              │ 3. 点击「保存」  ✔ L1 45ms                  │
+│                  │ ...                                        │
+│                  ├───────────────────────────────────────────┤
+│                  │ [▶ 回放] [自检]  变量：password=____       │
+│                  │ 回放进度 / 每步状态 / 失败原因（人话）     │
+└──────────────────┴───────────────────────────────────────────┘
+```
+
+- 全部中文、大字号、按钮明显；失败状态用红色 + 一句人话原因 + 「重新录制这一步」提示。
+- 不用任何前端框架/构建步骤：`packages/studio/public/{index.html,app.js,styles.css}`。
+- 轮询即可（500ms），不要求 WebSocket/SSE。
+
+## REST API
+
+### 流程
+- `GET /api/flows` → `{ flows: Array<{ file: string; title: string; steps: number; version: number; updatedAt: string }> }`
+- `GET /api/flows/:file` → `{ flow: Flow; steps: Array<StepSummary> }`
+- `POST /api/flows/:file/rename` body `{ title: string }` → `{ ok: true }`
+- `POST /api/flows/:file/steps/:stepId/delete` → `{ ok: true; flow: Flow }`
+- `POST /api/flows/:file/variables` body `{ variables: Array<{name,value}> }` → `{ ok: true }`
+
+`StepSummary = { index: number; id: string; kind: string; title: string; description?: string; expect?: string; screenshot?: string /* URL */ }`
+
+`title` 由后端生成人话：`打开 <url>` / `输入 <值> 到 <描述>` / `点击 <描述>` / `选择 <值>` / `按键 <key>` / `等待 <条件>` / `断言 <...>`。
+
+### 录制
+- `POST /api/record/start` body `{ url: string; title?: string }` → `{ sessionId: string }`
+  - 后端启动**可见**的受控 Chromium（headless:false），开始采集。
+- `GET /api/record/status?sessionId=...` → `{ recording: boolean; steps: StepSummary[]; elapsedMs: number }`
+- `POST /api/record/stop` body `{ sessionId: string }` → `{ file: string; flow: Flow; selfCheck: SelfCheck }`
+  - 保存到 `flows/studio-<yyyymmdd-hhmmss>.json` 并自动跑一次自检（1 次回放，headless）
+- `POST /api/record/cancel` body `{ sessionId }` → 关闭浏览器、丢弃录制
+
+`SelfCheck = { ok: boolean; steps: Array<{ id: string; status: 'pass'|'fail'; level?: string; reason?: string }>; summary: string }`
+
+### 回放
+- `POST /api/play` body `{ file: string; runs?: number; variables?: Record<string,string>; headed?: boolean }` → `{ runId: string }`
+- `GET /api/runs/:runId` → `{ status: 'running'|'done'|'error'; file: string; runs: Array<{ ok: boolean; steps: Array<{ id: string; kind: string; status: string; level?: string; ms: number; reason?: string; code?: string; screenshot?: string }> }>; message?: string }`
+- `POST /api/runs/:runId/stop` → 尽量中止（可选实现）
+
+### 静态资源
+- `GET /artifacts/*` → artifacts 目录下的文件（截图等），直接以 `Content-Type` 返回。
+- `GET /api/config` → `{ aiEnabled: boolean; flowsDir: string; artifactsDir: string }`
+
+## 错误码 → 人话（后端统一映射，前端直接展示 `reason`）
+
+| code | 人话 |
+|---|---|
+| ELEMENT_NOT_FOUND | 页面上找不到这个元素，可能页面改版了或还没加载完 |
+| NOT_ACTIONABLE | 找到了元素但暂时点不了（被遮挡/不可见/未启用） |
+| NO_EFFECT | 点了但页面没有反应，可能需要再确认一次 |
+| EXPECT_MISMATCH | 操作后页面没有出现预期变化 |
+| NAVIGATION_FAILED | 页面打开失败，检查网址或网络 |
+| BROWSER_CRASH | 浏览器异常退出 |
+| VARIABLE_MISSING | 缺少运行参数（变量未填写） |
+
+## 非目标（v0.1 不做）
+
+- 多标签页/多系统流程（下一版）
+- 变量 CSV 批量
+- 权限/分享
+- AI 兜底开关（只展示与 AI 相关的失败提示，不真正调用）

@@ -1,0 +1,8 @@
+{
+  "name": "@rr/studio",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "local web console for business users",
+  "exports": { ".": "./src/index.ts" }
+}

@@ -259,8 +259,16 @@
 		} catch {
 			return null
 		}
+		var className = ''
+		try {
+			className = typeof el.className === 'string' ? el.className : ''
+			if (className.length > 200) className = className.slice(0, 200)
+		} catch {
+			className = ''
+		}
 		var facts = {
 			tag: el.nodeName.toLowerCase(),
+			className: className,
 			attributes: readAttributes(el),
 			text: readText(el),
 			rect: {
@@ -315,7 +323,8 @@
 	var INTERACTIVE =
 		'a,button,input,select,textarea,label,summary,option,' +
 		'[role=button],[role=link],[role=checkbox],[role=radio],[role=switch],' +
-		'[role=tab],[role=menuitem],[role=option]'
+		'[role=tab],[role=menuitem],[role=option],[role=combobox],[role=textbox],' +
+		'[role=searchbox],[aria-haspopup],[aria-expanded]'
 
 	function retarget(el) {
 		if (!el || el.nodeType !== 1) return el

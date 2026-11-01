@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxj1in7_uyt7w8",
+  "id": "flow_mvxll34m_aoltcj",
   "title": "/basic",
   "version": 1,
-  "createdAt": "2026-11-01T07:47:11.018Z",
+  "createdAt": "2026-11-01T08:58:23.275Z",
   "meta": {
     "env": {
-      "startUrl": "http://127.0.0.1:5199/basic",
+      "startUrl": "http://127.0.0.1:5173/basic",
       "viewport": {
         "width": 1440,
         "height": 900
@@ -49,7 +49,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519230663
+          "recordedAt": 1793523502936
         },
         "candidates": [
           {
@@ -174,7 +174,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519230762
+          "recordedAt": 1793523503063
         },
         "candidates": [
           {
@@ -272,120 +272,6 @@
     },
     {
       "id": "s3",
-      "kind": "select",
-      "target": {
-        "observed": {
-          "tag": "select",
-          "attributes": {
-            "id": "country",
-            "name": "country",
-            "data-testid": "field-country"
-          },
-          "text": "中国",
-          "rect": {
-            "x": 327,
-            "y": 622.27,
-            "width": 786,
-            "height": 38
-          },
-          "scroll": {
-            "x": 0,
-            "y": 0
-          },
-          "viewport": {
-            "width": 1440,
-            "height": 900
-          },
-          "dpr": 1,
-          "recordedAt": 1793519230843
-        },
-        "candidates": [
-          {
-            "kind": "testid",
-            "value": "field-country",
-            "score": 10,
-            "source": "record"
-          },
-          {
-            "kind": "role",
-            "value": {
-              "role": "combobox",
-              "name": "国家",
-              "exact": true
-            },
-            "score": 30,
-            "source": "record"
-          },
-          {
-            "kind": "role",
-            "value": {
-              "role": "combobox",
-              "name": "国家",
-              "exact": false
-            },
-            "score": 36,
-            "source": "record"
-          },
-          {
-            "kind": "label",
-            "value": "国家",
-            "score": 50,
-            "source": "record"
-          },
-          {
-            "kind": "css",
-            "value": "#country",
-            "score": 100,
-            "source": "record"
-          },
-          {
-            "kind": "css",
-            "value": "select[name=\"country\"]",
-            "score": 150,
-            "source": "record"
-          },
-          {
-            "kind": "xpath",
-            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[10]",
-            "score": 900,
-            "source": "record"
-          }
-        ],
-        "fingerprint": {
-          "tag": "select",
-          "role": "combobox",
-          "accessibleName": "国家",
-          "attrs": {
-            "id": "country",
-            "name": "country",
-            "data-testid": "field-country"
-          },
-          "stableHash": "b227ea2fba00306d2e00546c7fdd07733baa7145",
-          "nodePath": [
-            1,
-            1,
-            0,
-            1,
-            9
-          ]
-        },
-        "frame": {
-          "path": []
-        },
-        "description": "select #country [testid=field-country] role=combobox name=\"国家\"",
-        "nearbyText": [
-          "国家",
-          "订阅产品更新"
-        ],
-        "crop": {
-          "ref": "record/elements/2.png",
-          "dpr": 1
-        }
-      },
-      "value": "cn"
-    },
-    {
-      "id": "s4",
       "expect": {
         "kind": "elementVisible",
         "target": {
@@ -397,7 +283,7 @@
               "aria-live": "polite",
               "data-testid": "basic-result"
             },
-            "text": "提交成功（第 1 次） 姓名: alice 密码长度: 0 邮箱: alice@example.com 国家: cn 订阅: 否 套餐: basic 简介: （空）",
+            "text": "提交成功（第 1 次） 姓名: alice 密码长度: 0 邮箱: alice@example.com 国家: （未选择） 订阅: 否 套餐: basic 简介: （空）",
             "rect": {
               "x": 327,
               "y": 883.08,
@@ -413,7 +299,7 @@
               "height": 900
             },
             "dpr": 1,
-            "recordedAt": 1793519231008
+            "recordedAt": 1793523503264
           },
           "candidates": [
             {
@@ -434,6 +320,12 @@
               "kind": "css",
               "value": "#basic-result",
               "score": 100,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "div.result",
+              "score": 650,
               "source": "record"
             },
             {
@@ -493,7 +385,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519230925
+          "recordedAt": 1793523503179
         },
         "candidates": [
           {
@@ -568,7 +460,7 @@
           "重置"
         ],
         "crop": {
-          "ref": "record/elements/3.png",
+          "ref": "record/elements/2.png",
           "dpr": 1
         }
       },

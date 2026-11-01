@@ -311,7 +311,24 @@ export async function executeRun(
 			const startUrl = rebaseUrl(env.startUrl, opts.baseUrl)
 			try {
 				if (startUrl !== env.startUrl) pushLog(`startUrl 重定基：${env.startUrl} → ${startUrl}`)
-				await page.goto(startUrl, { timeout: timeoutMs, waitUntil: 'load' })
+				// 慢站点/网络抖动：startUrl 打开重试 2 次（真实企业系统常见）
+				let lastErr: unknown
+				let opened = false
+				for (let attempt = 1; attempt <= 2 && !opened; attempt++) {
+					try {
+						await page.goto(startUrl, { timeout: timeoutMs, waitUntil: 'load' })
+						opened = true
+					} catch (err) {
+						lastErr = err
+						if (attempt < 2) {
+							pushLog(
+								`打开 startUrl 失败（第 ${attempt} 次），重试：${(err as Error).message.split('\n')[0]}`,
+							)
+							await sleep(1000)
+						}
+					}
+				}
+				if (!opened) throw lastErr
 			} catch (err) {
 				const classified = classifyError(err, 'navigate')
 				const stepResult: StepResult = {

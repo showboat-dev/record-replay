@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxj4cou_m8p4ac",
+  "id": "flow_mvxll8vl_axdkzs",
   "title": "/spa",
   "version": 1,
-  "createdAt": "2026-11-01T07:49:23.148Z",
+  "createdAt": "2026-11-01T08:58:30.615Z",
   "meta": {
     "env": {
       "startUrl": "http://127.0.0.1:5173/spa#/list",
@@ -51,7 +51,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519362995
+          "recordedAt": 1793523510454
         },
         "candidates": [
           {
@@ -165,7 +165,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519363067
+          "recordedAt": 1793523510549
         },
         "candidates": [
           {

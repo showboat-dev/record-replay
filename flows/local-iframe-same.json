@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxixjtw_sgtjy9",
+  "id": "flow_mvxll41m_3q37db",
   "title": "/iframe-same",
   "version": 1,
-  "createdAt": "2026-11-01T07:44:05.638Z",
+  "createdAt": "2026-11-01T08:58:24.293Z",
   "meta": {
     "env": {
-      "startUrl": "http://127.0.0.1:5199/iframe-same",
+      "startUrl": "http://127.0.0.1:5173/iframe-same",
       "viewport": {
         "width": 1440,
         "height": 900
@@ -48,7 +48,7 @@
             "height": 298
           },
           "dpr": 1,
-          "recordedAt": 1793519045457
+          "recordedAt": 1793523504105
         },
         "candidates": [
           {
@@ -155,7 +155,7 @@
                     "height": 900
                   },
                   "dpr": 1,
-                  "recordedAt": 1793519045542
+                  "recordedAt": 1793523504185
                 },
                 "candidates": [
                   {
@@ -168,6 +168,12 @@
                     "kind": "css",
                     "value": "iframe[name=\"innerForm\"]",
                     "score": 150,
+                    "source": "record"
+                  },
+                  {
+                    "kind": "css",
+                    "value": "iframe.frame",
+                    "score": 650,
                     "source": "record"
                   },
                   {
@@ -197,7 +203,7 @@
             },
             {
               "kind": "urlPattern",
-              "pattern": "http://127.0.0.1:5199/inner-form"
+              "pattern": "http://127.0.0.1:5173/inner-form"
             }
           ]
         },
@@ -211,7 +217,7 @@
           "dpr": 1
         }
       },
-      "value": "nested-bob",
+      "value": "bob",
       "clear": true
     },
     {
@@ -241,7 +247,7 @@
             "height": 298
           },
           "dpr": 1,
-          "recordedAt": 1793519045557
+          "recordedAt": 1793523504218
         },
         "candidates": [
           {
@@ -329,7 +335,7 @@
                     "height": 900
                   },
                   "dpr": 1,
-                  "recordedAt": 1793519045625
+                  "recordedAt": 1793523504283
                 },
                 "candidates": [
                   {
@@ -342,6 +348,12 @@
                     "kind": "css",
                     "value": "iframe[name=\"innerForm\"]",
                     "score": 150,
+                    "source": "record"
+                  },
+                  {
+                    "kind": "css",
+                    "value": "iframe.frame",
+                    "score": 650,
                     "source": "record"
                   },
                   {
@@ -371,7 +383,7 @@
             },
             {
               "kind": "urlPattern",
-              "pattern": "http://127.0.0.1:5199/inner-form"
+              "pattern": "http://127.0.0.1:5173/inner-form"
             }
           ]
         },

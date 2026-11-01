@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjyl06_xthkxi",
+  "id": "flow_mvxl6k31_c11vbm",
   "title": "/wiki/Main_Page",
   "version": 1,
-  "createdAt": "2026-11-01T08:12:55.513Z",
+  "createdAt": "2026-11-01T08:47:07.170Z",
   "meta": {
     "env": {
       "startUrl": "https://en.wikipedia.org/wiki/Main_Page",
@@ -50,7 +50,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520773620
+          "recordedAt": 1793522825322
         },
         "candidates": [
           {
@@ -142,7 +142,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520773624
+          "recordedAt": 1793522825326
         },
         "candidates": [
           {
@@ -205,7 +205,7 @@
       "id": "s3",
       "expect": {
         "kind": "urlChange",
-        "pattern": "https://en.wikipedia.org/wiki/Microsoft"
+        "pattern": "https://en.wikipedia.org/wiki/Playwright_(software)"
       },
       "kind": "click",
       "target": {
@@ -228,13 +228,19 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520773625
+          "recordedAt": 1793522825327
         },
         "candidates": [
           {
             "kind": "text",
             "value": "Search",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button.cdx-button.cdx-search-input__end-button",
+            "score": 650,
             "source": "record"
           },
           {
@@ -286,7 +292,7 @@
           "text": "Microsoft",
           "rect": {
             "x": 998,
-            "y": 308.36,
+            "y": 307.36,
             "width": 57.13,
             "height": 16
           },
@@ -299,13 +305,19 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793520774535
+          "recordedAt": 1793522826156
         },
         "candidates": [
           {
             "kind": "text",
             "value": "Microsoft",
             "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "a[href=\"https://en.wikipedia.org/wiki/Microsoft\"]",
+            "score": 300,
             "source": "record"
           },
           {

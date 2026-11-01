@@ -12,6 +12,7 @@ export default defineConfig({
       '@rr/executor': r('./packages/executor/src/index.ts'),
       '@rr/ai': r('./packages/ai/src/index.ts'),
       '@rr/harness': r('./packages/harness/src/index.ts'),
+      '@rr/studio': r('./packages/studio/src/index.ts'),
     },
   },
   test: {

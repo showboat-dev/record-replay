@@ -72,6 +72,9 @@ async function main(): Promise<void> {
 		case 'harness':
 			await harnessCmd(argv.slice(1))
 			return
+		case 'studio':
+			await studioCmd(argv.slice(1))
+			return
 		default:
 			usageError(`未知命令 "${command}"`)
 	}
@@ -193,9 +196,14 @@ async function createAiClient(enabled: boolean): Promise<RepairClient | null> {
 	return client
 }
 
-function parseIntegerFlag(raw: string | boolean | undefined, name: string, fallback: number): number {
+function parseIntegerFlag(
+	raw: string | boolean | undefined,
+	name: string,
+	fallback: number,
+): number {
 	const value = Number(raw ?? fallback)
-	if (!Number.isInteger(value) || value < 1) usageError(`${name} 必须是 >= 1 的整数，收到 "${String(raw)}"`)
+	if (!Number.isInteger(value) || value < 1)
+		usageError(`${name} 必须是 >= 1 的整数，收到 "${String(raw)}"`)
 	return value
 }
 
@@ -276,7 +284,9 @@ async function playCmd(args: string[]): Promise<void> {
 		}
 		const results = await playRuns(options)
 		if (writeBack) {
-			console.error(pc.yellow('提示：--write-back 已开启，自愈结果会写回 flow（写前备份为 .bak，version+1）。'))
+			console.error(
+				pc.yellow('提示：--write-back 已开启，自愈结果会写回 flow（写前备份为 .bak，version+1）。'),
+			)
 		}
 		if (values['json']) {
 			console.log(JSON.stringify(results, null, 2))
@@ -295,6 +305,19 @@ async function playCmd(args: string[]): Promise<void> {
 		if (isMissingModule(err, '@rr/executor')) notImplemented('play')
 		throw err
 	}
+}
+
+async function studioCmd(args: string[]): Promise<void> {
+	const { values } = parseArgs({
+		args,
+		allowPositionals: true,
+		options: { port: { type: 'string' } },
+	})
+	if (values['port']) process.env.RR_STUDIO_PORT = String(values['port'])
+	const { createStudioServer } = (await import('@rr/studio')) as typeof import('@rr/studio')
+	await createStudioServer()
+	// 保持进程存活
+	await new Promise(() => {})
 }
 
 async function harnessCmd(args: string[]): Promise<void> {
@@ -330,7 +353,9 @@ async function harnessCmd(args: string[]): Promise<void> {
 		}
 		if (reportLooksNotImplemented(result.report)) {
 			console.error(
-				pc.yellow('提示：executor 尚未实现，本次所有站点都无法运行。等 T5 完成后即可产出真实回归数据。'),
+				pc.yellow(
+					'提示：executor 尚未实现，本次所有站点都无法运行。等 T5 完成后即可产出真实回归数据。',
+				),
 			)
 		}
 		process.exit(result.exitCode)

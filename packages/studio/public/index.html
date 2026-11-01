@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light" />
+		<title>流程录制助手 · 本地控制台</title>
+		<!-- 纯静态、零外部依赖：不使用任何 CDN / 远程字体 / 图标库 -->
+		<link
+			rel="icon"
+			href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Ctext x='16' y='22' font-size='13' font-weight='700' text-anchor='middle' fill='white' font-family='sans-serif'%3ERR%3C/text%3E%3C/svg%3E"
+		/>
+		<link rel="stylesheet" href="./styles.css" />
+	</head>
+	<body>
+		<header class="topbar">
+			<div class="brand">
+				<div class="brand-mark" aria-hidden="true">RR</div>
+				<div class="brand-text">
+					<h1>流程录制助手</h1>
+					<p class="brand-sub">录制一次，以后点一下就能重复执行</p>
+				</div>
+			</div>
+
+			<form id="record-form" class="record-form" autocomplete="off" novalidate>
+				<div class="record-fields">
+					<label class="field field-url">
+						<span class="field-label">要录制的网址</span>
+						<input
+							id="record-url"
+							name="url"
+							type="text"
+							inputmode="url"
+							spellcheck="false"
+							placeholder="例如 https://example.com/login"
+							aria-describedby="record-hint"
+						/>
+					</label>
+					<label class="field field-title">
+						<span class="field-label">流程名字（可以不填）</span>
+						<input
+							id="record-title"
+							name="title"
+							type="text"
+							maxlength="60"
+							placeholder="例如 登录并提交报销"
+						/>
+					</label>
+				</div>
+
+				<div class="record-actions">
+					<button id="btn-start" class="btn btn-primary" type="submit">● 开始录制</button>
+					<button id="btn-stop" class="btn btn-danger" type="button" hidden>■ 停止并保存</button>
+					<button id="btn-cancel" class="btn btn-ghost" type="button" hidden>放弃录制</button>
+					<div id="record-clock" class="record-clock" hidden>
+						<span class="rec-dot" aria-hidden="true"></span>
+						<span id="record-clock-text">录制中 00:00</span>
+					</div>
+				</div>
+
+				<p id="record-hint" class="field-hint">
+					点「开始录制」会弹出一个浏览器窗口，你在里面正常操作，每一步都会自动记下来。
+				</p>
+			</form>
+		</header>
+
+		<div id="banner-host" class="banner-host"></div>
+
+		<main class="layout">
+			<aside class="pane flows-pane" aria-label="流程列表">
+				<div class="pane-head">
+					<h2>我的流程</h2>
+					<button id="btn-refresh" class="btn btn-tiny btn-ghost" type="button" title="重新加载流程列表">
+						刷新
+					</button>
+				</div>
+				<div id="flows-meta" class="pane-meta"></div>
+				<div id="flows-host" class="flows-host"></div>
+			</aside>
+
+			<section class="pane detail-pane" aria-label="流程详情">
+				<div id="detail-header" class="detail-header"></div>
+				<div id="timeline" class="timeline"></div>
+				<div id="bottom-panel" class="bottom-panel"></div>
+			</section>
+		</main>
+
+		<div id="toast-host" class="toast-host" role="status" aria-live="polite"></div>
+		<div id="modal-root" class="modal-root"></div>
+
+		<script src="./app.js"></script>
+	</body>
+</html>

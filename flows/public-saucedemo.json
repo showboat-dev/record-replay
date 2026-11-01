@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxjdc7i_hsmd7c",
+  "id": "flow_mvxl699o_ueo6xe",
   "title": "www.saucedemo.com",
   "version": 1,
-  "createdAt": "2026-11-01T07:56:23.335Z",
+  "createdAt": "2026-11-01T08:46:52.713Z",
   "meta": {
     "env": {
       "startUrl": "https://www.saucedemo.com/",
@@ -56,7 +56,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782149
+          "recordedAt": 1793522811083
         },
         "candidates": [
           {
@@ -145,7 +145,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782171
+          "recordedAt": 1793522811103
         },
         "candidates": [
           {
@@ -237,7 +237,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782206
+          "recordedAt": 1793522811134
         },
         "candidates": [
           {
@@ -259,9 +259,9 @@
             "source": "record"
           },
           {
-            "kind": "xpath",
-            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[1]/*[1]/*[1]/*[1]/*[4]",
-            "score": 900,
+            "kind": "css",
+            "value": "input.submit-button.btn_action",
+            "score": 650,
             "source": "record"
           }
         ],
@@ -325,7 +325,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782267
+          "recordedAt": 1793522811198
         },
         "candidates": [
           {
@@ -415,7 +415,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782303
+          "recordedAt": 1793522811230
         },
         "candidates": [
           {
@@ -505,7 +505,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782518
+          "recordedAt": 1793522811552
         },
         "candidates": [
           {
@@ -591,7 +591,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782568
+          "recordedAt": 1793522811612
         },
         "candidates": [
           {
@@ -679,7 +679,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782595
+          "recordedAt": 1793522811634
         },
         "candidates": [
           {
@@ -768,7 +768,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782599
+          "recordedAt": 1793522811638
         },
         "candidates": [
           {
@@ -830,10 +830,6 @@
     },
     {
       "id": "s10",
-      "expect": {
-        "kind": "urlChange",
-        "pattern": "https://www.saucedemo.com/checkout-step-one.html"
-      },
       "kind": "input",
       "target": {
         "observed": {
@@ -861,7 +857,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782602
+          "recordedAt": 1793522811641
         },
         "candidates": [
           {
@@ -923,6 +919,10 @@
     },
     {
       "id": "s11",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://www.saucedemo.com/checkout-step-two.html"
+      },
       "kind": "click",
       "target": {
         "observed": {
@@ -949,7 +949,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782634
+          "recordedAt": 1793522811662
         },
         "candidates": [
           {
@@ -971,9 +971,9 @@
             "source": "record"
           },
           {
-            "kind": "xpath",
-            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]/*[1]/*[1]/*[2]/*[2]",
-            "score": 900,
+            "kind": "css",
+            "value": "input.submit-button.btn",
+            "score": 650,
             "source": "record"
           }
         ],
@@ -1041,7 +1041,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519782684
+          "recordedAt": 1793522811712
         },
         "candidates": [
           {

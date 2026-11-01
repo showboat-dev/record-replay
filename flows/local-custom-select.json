@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "flow_mvxj49ph_3olqmr",
+  "id": "flow_mvxll5wa_ai7x6o",
   "title": "/custom-select",
   "version": 1,
-  "createdAt": "2026-11-01T07:49:22.095Z",
+  "createdAt": "2026-11-01T08:58:29.538Z",
   "meta": {
     "env": {
       "startUrl": "http://127.0.0.1:5173/custom-select",
@@ -52,7 +52,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519358988
+          "recordedAt": 1793523506405
         },
         "candidates": [
           {
@@ -91,6 +91,12 @@
             "kind": "css",
             "value": "#cs-trigger",
             "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button.cs-trigger",
+            "score": 650,
             "source": "record"
           },
           {
@@ -165,7 +171,7 @@
               "height": 900
             },
             "dpr": 1,
-            "recordedAt": 1793519362084
+            "recordedAt": 1793523509526
           },
           "candidates": [
             {
@@ -192,6 +198,12 @@
               "kind": "css",
               "value": "#cs-result",
               "score": 100,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "div.result",
+              "score": 650,
               "source": "record"
             },
             {
@@ -250,7 +262,7 @@
             "height": 900
           },
           "dpr": 1,
-          "recordedAt": 1793519359069
+          "recordedAt": 1793523506517
         },
         "candidates": [
           {
@@ -274,9 +286,9 @@
             "source": "record"
           },
           {
-            "kind": "xpath",
-            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[2]/*[1]",
-            "score": 900,
+            "kind": "css",
+            "value": "li.cs-option",
+            "score": 650,
             "source": "record"
           }
         ],
