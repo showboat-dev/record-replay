@@ -44,6 +44,24 @@ export {
 export { DialogManager, type DialogAction, type DialogLike, type DialogMode, type PendingDialog } from './dialogs.js'
 export { DownloadManager, type DownloadRecord } from './downloads.js'
 export { runAction } from './actions.js'
+export {
+	artifactRelativePath,
+	pickFailedStep,
+	playBatch,
+	runBatchRows,
+	summarizeBatch,
+	type BatchOptions,
+	type BatchResult,
+	type BatchRow,
+	type BatchRowLoopInput,
+	type BatchRowResult,
+} from './batch.js'
+export {
+	runFlowInBrowserContext,
+	type FlowContextRunInput,
+	type FlowContextRunOutcome,
+} from './run.js'
+export type { ArtifactLayout } from './artifacts.js'
 export { executeRun } from './run.js'
 export { EXPECT_WAIT_MS, domSignatureOf, pollUntil, runAssertion, verifyExpect } from './verify.js'
 export type { VerifyDeps } from './verify.js'

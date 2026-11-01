@@ -71,15 +71,33 @@ export interface StepArtifactPayload {
 	element?: Buffer
 }
 
+/** artifacts 目录布局：单次回放走 runs/，批量走 batches/<batchId>/row-<index>/ */
+export type ArtifactLayout =
+	| { kind: 'runs' }
+	| { kind: 'batches'; batchId: string; rowIndex: number | string }
+
 export class ArtifactWriter {
 	readonly root: string
 	readonly flowDir: string
 	readonly runDir: string
 
-	constructor(root: string, flowId: string, runId: string) {
+	constructor(
+		root: string,
+		flowId: string,
+		runId: string,
+		layout: ArtifactLayout = { kind: 'runs' },
+	) {
 		this.root = resolve(root)
 		this.flowDir = join(this.root, sanitizeSegment(flowId))
-		this.runDir = join(this.flowDir, 'runs', sanitizeSegment(runId))
+		this.runDir =
+			layout.kind === 'runs'
+				? join(this.flowDir, 'runs', sanitizeSegment(runId))
+				: join(
+						this.flowDir,
+						'batches',
+						sanitizeSegment(layout.batchId),
+						`row-${sanitizeSegment(String(layout.rowIndex))}`,
+					)
 	}
 
 	/** 保证相对路径不越狱，返回绝对路径 */
@@ -120,6 +138,11 @@ export class ArtifactWriter {
 		)
 		await writeFile(join(stepDir, 'log.txt'), `${payload.log.join('\n')}\n`, 'utf8')
 		return stepDir
+	}
+
+	/** 批次的根目录：`artifacts/<flowId>/batches/<batchId>/`（行目录在它下面的 row-<index>/） */
+	static batchRoot(root: string, flowId: string, batchId: string): string {
+		return join(resolve(root), sanitizeSegment(flowId), 'batches', sanitizeSegment(batchId))
 	}
 
 	/** 下载目录：`artifacts/<flowId>/runs/<runId>/downloads/` */

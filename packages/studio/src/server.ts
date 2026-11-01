@@ -25,9 +25,18 @@ import {
 	type FlowSuggestions,
 	type SuggestVariableType,
 } from '@rr/suggest'
-import { playRuns, type RunResult, type StepResult } from '@rr/executor'
+import { playBatch, playRuns, type RunResult, type StepResult } from '@rr/executor'
 import { record, type RecordOptions } from '@rr/recorder'
 
+import {
+	BatchError,
+	exportBatchCsv,
+	getBatch,
+	startBatch,
+	stopBatch,
+	type BatchRowResultLike,
+} from './batch.js'
+import { CsvError, parseCsv } from './csv.js'
 import {
 	deleteProfile,
 	listProfiles,
@@ -896,6 +905,22 @@ function sendSuggestError(res: ServerResponse, err: unknown): void {
 	json(res, 500, { error: `内部错误：${(err as Error).message}` })
 }
 
+/** 批量执行错误映射：CSV/Batch 参数错 → 400（带 code），flow 不存在 → 404，其余 → 500 */
+function sendBatchError(res: ServerResponse, err: unknown): void {
+	if (err instanceof CsvError) return json(res, 400, { error: err.message, code: err.code })
+	if (err instanceof BatchError) {
+		return json(res, err.code === 'BATCH_NOT_FOUND' ? 404 : 400, {
+			error: err.message,
+			code: err.code,
+		})
+	}
+	if (err instanceof Error && err.message === '流程文件不存在') {
+		return json(res, 404, { error: 'flow 不存在' })
+	}
+	console.error('[studio] 批量执行接口失败', err)
+	json(res, 500, { error: `内部错误：${(err as Error).message}` })
+}
+
 /* ------------------------------------------------------------------ */
 /* 路由                                                                */
 /* ------------------------------------------------------------------ */
@@ -1053,6 +1078,99 @@ async function handleApi(
 			json(res, 200, { ok: true, flow })
 		} catch (err) {
 			sendSuggestError(res, err)
+		}
+		return true
+	}
+
+	/* ---------- CSV 批量执行（docs/batch-run.md §C） ---------- */
+
+	const batchStartMatch = /^\/api\/flows\/([^/]+)\/batch\/start$/.exec(path)
+	if (batchStartMatch && method === 'POST') {
+		const file = decodeURIComponent(batchStartMatch[1]!)
+		const flowFile = flowFileFromName(config, file)
+		if (!flowFile) return (json(res, 404, { error: 'flow 不存在' }), true)
+		try {
+			const body = await readBody(req)
+			const csvText = String(body.csvText ?? '')
+			const flow = await loadFlow(flowFile)
+			const parsed = parseCsv(csvText)
+			const batchId = makeId('batch')
+			const origin = originOf(flow.meta.env.startUrl)
+			const storageStatePath = await storageStatePathIfExists(config.profilesDir, origin)
+			const mapping =
+				body.mapping && typeof body.mapping === 'object'
+					? (body.mapping as Record<string, string>)
+					: undefined
+			const options = (body.options ?? {}) as {
+				headless?: boolean
+				stopOnFailure?: boolean
+				rowDelayMs?: number
+			}
+			const started = startBatch({
+				batchId,
+				file,
+				flow,
+				headers: parsed.headers,
+				csvRows: parsed.rows,
+				...(mapping ? { mapping } : {}),
+				options,
+				artifactsRoot: config.artifactsDir,
+				...(storageStatePath ? { storageStatePath } : {}),
+				runner: (input) =>
+					playBatch({
+						flow: input.flow,
+						rows: input.rows,
+						headless: input.headless,
+						stopOnFailure: input.stopOnFailure,
+						rowDelayMs: input.rowDelayMs,
+						artifactsRoot: input.artifactsRoot,
+						batchId,
+						...(input.storageStatePath ? { storageStatePath: input.storageStatePath } : {}),
+						...(input.onRow ? { onRow: input.onRow as (row: unknown) => void } : {}),
+						signal: input.signal,
+					}).then((result) => ({
+						rows: result.rows as unknown as BatchRowResultLike[],
+						stopped: result.stopped,
+					})),
+			})
+			json(res, 200, { ok: true, ...started, warnings: parsed.warnings })
+		} catch (err) {
+			sendBatchError(res, err)
+		}
+		return true
+	}
+	const batchGetMatch = /^\/api\/batches\/([^/]+)$/.exec(path)
+	if (batchGetMatch && method === 'GET') {
+		try {
+			json(res, 200, getBatch(decodeURIComponent(batchGetMatch[1]!)))
+		} catch (err) {
+			sendBatchError(res, err)
+		}
+		return true
+	}
+	const batchStopMatch = /^\/api\/batches\/([^/]+)\/stop$/.exec(path)
+	if (batchStopMatch && method === 'POST') {
+		try {
+			const stopped = stopBatch(decodeURIComponent(batchStopMatch[1]!))
+			json(res, 200, { ok: true, stopped })
+		} catch (err) {
+			sendBatchError(res, err)
+		}
+		return true
+	}
+	const batchExportMatch = /^\/api\/batches\/([^/]+)\/export\.csv$/.exec(path)
+	if (batchExportMatch && method === 'GET') {
+		try {
+			const job = getBatch(decodeURIComponent(batchExportMatch[1]!))
+			const text = exportBatchCsv(job, job.headers)
+			res.writeHead(200, {
+				'content-type': 'text/csv; charset=utf-8',
+				'content-disposition': `attachment; filename="batch-${job.batchId}.csv"`,
+				'cache-control': 'no-store',
+			})
+			res.end(text)
+		} catch (err) {
+			sendBatchError(res, err)
 		}
 		return true
 	}

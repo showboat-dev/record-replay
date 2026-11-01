@@ -72,6 +72,16 @@
 | BROWSER_CRASH     | 浏览器异常退出                                   |
 | VARIABLE_MISSING  | 缺少运行参数（变量未填写）                       |
 
+### CSV 批量执行（v0.5 新增，契约详见 docs/batch-run.md §C）
+
+- `POST /api/flows/:file/batch/start` body `{ csvText, mapping?, options? }` → `{ batchId, total, columns, mapping, missingVariables, warnings }`
+- `GET /api/batches/:id` → `{ status, total, completed, okCount, failCount, rows, startedAt, finishedAt?, message? }`
+- `POST /api/batches/:id/stop` → `{ ok, stopped }`（当前行跑完再停）
+- `GET /api/batches/:id/export.csv` → 结果 CSV（UTF-8 BOM；原列 + 状态/失败步骤/失败原因/耗时ms）
+
+错误：`CsvError` / `BatchError` → 400 `{ error, code }`；批次不存在 → 404；其余 → 500。
+批次只存进程内存（Studio 重启即丢）。
+
 ### 登录态 profiles（v0.4 新增，契约详见 docs/profiles-rerecord.md §A.3）
 
 - `GET /api/profiles` → `{ profiles: ProfileMeta[] }`（只返回计数，不返回 cookie 原文）

@@ -4,7 +4,7 @@
  * 失败一律走 classifyError 落语义错误码，绝不把裸 timeout 抛给上层；
  * artifact 只在失败（或 screenshotMode='all'）时落盘，避免每步都写磁盘。
  */
-import { chromium, type BrowserContext, type Locator, type Page } from 'playwright'
+import { chromium, type Browser, type BrowserContext, type Locator, type Page } from 'playwright'
 
 import type { ElementRef, Flow } from '@rr/schema'
 import { makeId } from '@rr/schema'
@@ -198,16 +198,41 @@ async function flashLocator(locator: Locator, delayMs: number): Promise<void> {
 	await handle.dispose().catch(() => undefined)
 }
 
-export async function executeRun(
-	opts: PlayOptions,
-	runId: string = makeId('run'),
-): Promise<RunOutcome> {
-	const flow: Flow = opts.flow
+/**
+ * 在**已经启动的浏览器**里跑一次 flow：自己建 context（带登录态/视口覆盖）、跑完步骤、
+ * 收尾（保存登录态 → 关残留对话框 → 落下载）→ 关 context。
+ *
+ * 为什么抽出来：`playBatch` 要"浏览器只启动一次、每行一个 context"复用同一套逐步执行逻辑，
+ * 而 `executeRun` 的对外行为（含 headed 模式 keepOpen、browser.close）必须保持不变。
+ */
+export interface FlowContextRunInput {
+	browser: Browser
+	flow: Flow
+	opts: PlayOptions
+	artifacts: ArtifactWriter
+	runId: string
+	pushLog: (msg: string) => void
+	/** 覆盖 flow.meta.env 的视口（batch 每行可不同） */
+	viewport?: { width: number; height: number }
+	/** 本行/本次运行的起始时间戳（用于 startUrl 失败步骤的耗时归因） */
+	runStart: number
+}
+
+export interface FlowContextRunOutcome {
+	steps: StepResult[]
+	details: StepDetail[]
+	heals: HealInput[]
+	dialogs: string[]
+	downloads: string[]
+	pages: number
+}
+
+export async function runFlowInBrowserContext(
+	input: FlowContextRunInput,
+): Promise<FlowContextRunOutcome> {
+	const { browser, flow, opts, artifacts, pushLog } = input
 	const timeoutMs = opts.timeoutMs ?? 15_000
 	const screenshotMode = opts.screenshotMode ?? 'failures'
-	const artifacts = new ArtifactWriter(opts.artifactsRoot ?? './artifacts', flow.id, runId)
-	const startedAt = new Date().toISOString()
-	const runStart = Date.now()
 
 	const vars: Record<string, string> = {
 		...defaultVariables(flow.variables),
@@ -217,15 +242,6 @@ export async function executeRun(
 	const steps: StepResult[] = []
 	const details: StepDetail[] = []
 	const heals: HealInput[] = []
-	const log = (msg: string): void => {
-		opts.onLog?.(msg)
-	}
-
-	const logLines: string[] = []
-	const pushLog = (msg: string): void => {
-		logLines.push(msg)
-		log(`[${flow.id}] ${msg}`)
-	}
 
 	// ---- 对话框策略：flow 里有 dialog 步骤 → 手动模式（只暂存，等 dialog 步骤处理） ----
 	// 否则按 dialogPolicy：dismiss=auto（出现即关）、fail（出现即失败）
@@ -247,8 +263,8 @@ export async function executeRun(
 	// expect.download 只看"这一步开始之后"的下载
 	const downloadCursor = { current: 0 }
 	let observedPageCount = 1
+	const runStart = input.runStart
 
-	const browser = await chromium.launch({ headless: opts.headless ?? true })
 	let browserCrashed = false
 	/** finally 里保存登录态要用（context 在 try 内创建，作用域不外溢） */
 	let contextForSave: BrowserContext | undefined
@@ -265,7 +281,7 @@ export async function executeRun(
 		}
 
 		const context = await browser.newContext({
-			viewport: { width: env.viewport.width, height: env.viewport.height },
+			viewport: input.viewport ?? { width: env.viewport.width, height: env.viewport.height },
 			deviceScaleFactor: env.dpr,
 			...(env.locale ? { locale: env.locale } : {}),
 			...(env.timezone ? { timezoneId: env.timezone } : {}),
@@ -768,9 +784,55 @@ export async function executeRun(
 		await dialogManager.dismissRemaining().catch(() => 0)
 		// 等下载保存落盘（result.json 里要写文件名列表）
 		await downloads.flush().catch(() => undefined)
+		// 只关本行 context（浏览器由调用方管理/复用）；context 会连带关掉所有标签页
+		await contextForSave?.close().catch(() => {
+			/* context 可能已被页面崩溃连带关闭 */
+		})
+	}
+
+	return {
+		steps,
+		details,
+		heals,
+		dialogs: dialogManager.history,
+		downloads: downloads.list().map((record) => record.filename),
+		pages: observedPageCount,
+	}
+}
+
+
+export async function executeRun(
+	opts: PlayOptions,
+	runId: string = makeId('run'),
+): Promise<RunOutcome> {
+	const flow: Flow = opts.flow
+	const artifacts = new ArtifactWriter(opts.artifactsRoot ?? './artifacts', flow.id, runId)
+	const startedAt = new Date().toISOString()
+	const runStart = Date.now()
+
+	const logLines: string[] = []
+	const pushLog = (msg: string): void => {
+		logLines.push(msg)
+		opts.onLog?.(`[${flow.id}] ${msg}`)
+	}
+
+	const browser = await chromium.launch({ headless: opts.headless ?? true })
+	let outcome: FlowContextRunOutcome | undefined
+	try {
+		outcome = await runFlowInBrowserContext({
+			browser,
+			flow,
+			opts,
+			artifacts,
+			runId,
+			pushLog,
+			runStart,
+		})
+	} finally {
 		// 给业务人员留时间看结果：headed 模式下成功停留 keepOpenMs，失败停留更久
+		// （这是"单次回放"的 UX，所以留在 executeRun 外层；batch 每行都停会很痛苦）
+		const hasFailure = (outcome?.steps ?? []).some((s) => s.status === 'fail')
 		if (!(opts.headless ?? true)) {
-			const hasFailure = steps.some((s) => s.status === 'fail')
 			const keep = hasFailure ? (opts.keepOpenOnFailureMs ?? 15_000) : (opts.keepOpenMs ?? 1200)
 			if (keep > 0) {
 				pushLog(
@@ -785,6 +847,11 @@ export async function executeRun(
 			/* 浏览器可能已被外部关闭 */
 		})
 	}
+
+	if (!outcome) throw new Error('内部错误：runFlowInBrowserContext 没有返回结果')
+	const steps = outcome.steps
+	const details = outcome.details
+	const heals = outcome.heals
 
 	const passCount = steps.filter((s) => s.status === 'pass').length
 	const failCount = steps.filter((s) => s.status === 'fail').length
@@ -809,9 +876,9 @@ export async function executeRun(
 		artifactsDir: artifacts.runDir,
 		startedAt,
 		finishedAt: new Date().toISOString(),
-		dialogs: dialogManager.history,
-		downloads: downloads.list().map((record) => record.filename),
-		pages: observedPageCount,
+		dialogs: outcome.dialogs,
+		downloads: outcome.downloads,
+		pages: outcome.pages,
 		stepsDetail: details,
 	}
 

@@ -80,6 +80,22 @@ P50 93ms / P95 354ms
 > `__name(...)`，函数被 `page.evaluate` 序列化进页面后抛 `__name is not defined`，导致 L2 全挂。
 > 已在 resolver/executor/recorder 三处注入页面级垫片修复（`NAME_KEEPALIVE_SOURCE`）。
 
+## CSV 批量执行 + 结果导出（Sprint 2）
+
+流程里有 `{{变量}}` 后，Studio 变量面板出现「📄 批量运行（CSV）」：
+
+1. 选 CSV 文件或粘贴文本 → 本地预览前 5 行（BOM/引号/分隔符自动识别）；
+2. 给每个变量选对应列（同名自动匹配，缺列红字拦截）；
+3. 选项：显示浏览器窗口、某行失败后继续、行间隔 ms；
+4. 开始 → 进度条 + 实时行列表（失败原因/步骤/截图）+ 可停止（当前行跑完再停）；
+5. 结束 → 结果汇总 + 「导出结果 CSV」（原列 + 状态 + 失败步骤 + 失败原因 + 耗时，UTF-8 BOM，Excel 直接打开）。
+
+实现要点：
+
+- `@rr/executor` 的 `playBatch`：**浏览器只启动一次**，每行新建 context（登录态也带上），行级 artifacts 落 `artifacts/<flowId>/batches/<batchId>/row-N/`；
+- 行内缺变量只算**该行失败**，整批继续；`VARIABLE_MISSING` 带变量名；
+- 限制：CSV 默认 ≤2000 行 / 5MB；不支持 xlsx（请另存 CSV）；并发固定 1（业务系统避免压测/幂等风险）；批次只存内存。
+
 ## 登录态持久化 + 单步重录（Sprint 1）
 
 **登录态**：录制时登录一次，之后录制/回放自动带上（Playwright storageState，按 origin 存 `profiles/`，含 cookie + localStorage）。

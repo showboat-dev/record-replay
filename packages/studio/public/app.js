@@ -1,4 +1,4 @@
-/* global window, document, fetch, URL, URLSearchParams, Element, HTMLElement, HTMLInputElement, HTMLImageElement */
+/* global window, document, fetch, URL, URLSearchParams, Element, HTMLElement, HTMLInputElement, HTMLImageElement, HTMLSelectElement, HTMLTextAreaElement */
 'use strict'
 
 /* =========================================================================
@@ -136,6 +136,7 @@ const state = {
 	profilesError: '',
 	login: null, // { sessionId, url, startedAt, elapsedMs, busy }
 	rerecord: null, // { file, stepId, stepNo, title, sessionId, startUrl, phase }
+	batch: null, // CSV 批量执行：见 createBatchState()
 }
 
 const dom = {}
@@ -427,19 +428,20 @@ function confirmDialog(options) {
 function openZoom(src, name) {
 	const url = String(src || '')
 	if (!url) return
-	const root = dom.modalRoot
 	const previousFocus = document.activeElement
-	root.innerHTML = `<div class="modal-overlay" data-modal="zoom">
-		<div class="modal-card modal-zoom" role="dialog" aria-modal="true" aria-label="步骤截图">
+	// 用独立遮罩叠在最上层：批量运行弹窗里看截图时不会把弹窗冲掉
+	const overlay = document.createElement('div')
+	overlay.className = 'modal-overlay modal-zoom-overlay'
+	overlay.setAttribute('data-modal', 'zoom')
+	overlay.innerHTML = `<div class="modal-card modal-zoom" role="dialog" aria-modal="true" aria-label="步骤截图">
 			<div class="zoom-bar">
 				<span class="zoom-name">${esc(name || '步骤截图')}</span>
 				<button type="button" class="btn btn-small btn-ghost" data-modal-action="close">关闭</button>
 			</div>
 			<img src="${esc(url)}" alt="${esc(name || '步骤截图')}" />
-		</div>
-	</div>`
+		</div>`
+	document.body.appendChild(overlay)
 
-	const overlay = root.querySelector('.modal-overlay')
 	const onKey = (event) => {
 		if (event.key === 'Escape') {
 			event.preventDefault()
@@ -448,14 +450,14 @@ function openZoom(src, name) {
 	}
 	const close = () => {
 		document.removeEventListener('keydown', onKey)
-		root.innerHTML = ''
+		overlay.remove()
 		if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus()
 	}
 	document.addEventListener('keydown', onKey)
 	overlay.addEventListener('click', (event) => {
 		if (event.target === overlay) close()
 	})
-	const closeButton = root.querySelector('[data-modal-action="close"]')
+	const closeButton = overlay.querySelector('[data-modal-action="close"]')
 	if (closeButton) closeButton.addEventListener('click', close)
 }
 
@@ -963,13 +965,13 @@ function isRunActive() {
 	return Boolean(state.run && (state.run.status === 'starting' || state.run.status === 'running'))
 }
 
-/** 登录 / 单步重录这类"交互式会话"在进行中时，禁止并发发起其它长操作 */
+/** 登录 / 单步重录 / CSV 批量执行这类"进行中的长操作"，互相禁止并发 */
 function hasActiveSession() {
-	return Boolean(state.login) || Boolean(state.rerecord)
+	return Boolean(state.login) || Boolean(state.rerecord) || isBatchBusy()
 }
 
 function canManageProfile() {
-	return Boolean(state.detail) && !state.recording && !isRunActive() && !state.rerecord
+	return Boolean(state.detail) && !state.recording && !isRunActive() && !hasActiveSession()
 }
 
 async function loadProfiles(options) {
@@ -1189,7 +1191,7 @@ async function pollLoginStatus() {
 /* ---------------------------- 单步重录 ---------------------------------- */
 
 function rerecordBusy() {
-	return state.recording || isRunActive() || Boolean(state.login) || Boolean(state.rerecord)
+	return Boolean(state.recording) || isRunActive() || hasActiveSession()
 }
 
 async function startRerecord(stepId) {
@@ -1426,6 +1428,833 @@ function rerecordCandidatesDialog(options) {
 	})
 }
 
+/* --------------------------- CSV 批量执行 -------------------------------- */
+
+const BATCH_STATUS_TEXT = { running: '运行中', done: '已完成', stopped: '已停止', error: '出错' }
+const CSV_DELIMITER_TEXT = { ',': '逗号', ';': '分号', '\t': '制表符' }
+const BATCH_PREVIEW_ROWS = 5
+const BATCH_PREVIEW_MAX_ROWS = 5000
+
+let batchModalHandle = null
+let batchTextTimer = null
+
+function createBatchState() {
+	return {
+		file: '',
+		ui: 'setup', // setup | progress
+		csvText: '',
+		csvFileName: '',
+		preview: null, // { headers, rows, total, delimiter, warnings }
+		mapping: Object.create(null), // 变量名 -> CSV 列名
+		options: { showBrowser: false, continueOnFailure: true, rowDelayMs: 0 },
+		starting: false,
+		error: '',
+		id: '',
+		total: 0,
+		data: null,
+		stopRequested: false,
+		filterFailedOnly: false,
+		pollError: '',
+		notified: false,
+		lastPollAt: 0,
+	}
+}
+
+function isBatchRunning() {
+	return Boolean(
+		state.batch &&
+			state.batch.id &&
+			state.batch.data &&
+			state.batch.data.status === 'running'
+	)
+}
+
+function isBatchBusy() {
+	return Boolean(state.batch && (state.batch.starting || isBatchRunning()))
+}
+
+/** 只要批次还没结束（含尚未拿到第一份状态），就保持轮询 */
+function isBatchPollingNeeded() {
+	const batch = state.batch
+	if (!batch || !batch.id) return false
+	if (!batch.data) return true
+	return batch.data.status === 'running'
+}
+
+function normalizeHeaderKey(value) {
+	return String(value || '')
+		.toLowerCase()
+		.replace(/\s+/g, '')
+}
+
+function firstCsvLine(text) {
+	let inQuotes = false
+	const raw = String(text || '')
+	for (let index = 0; index < raw.length; index += 1) {
+		const char = raw[index]
+		if (char === '"') {
+			if (inQuotes && raw[index + 1] === '"') index += 1
+			else inQuotes = !inQuotes
+		} else if (!inQuotes && (char === '\n' || char === '\r')) {
+			return raw.slice(0, index)
+		}
+	}
+	return raw
+}
+
+function countOutsideQuotes(line, delimiter) {
+	let count = 0
+	let inQuotes = false
+	for (let index = 0; index < line.length; index += 1) {
+		const char = line[index]
+		if (char === '"') {
+			if (inQuotes && line[index + 1] === '"') index += 1
+			else inQuotes = !inQuotes
+		} else if (!inQuotes && char === delimiter) {
+			count += 1
+		}
+	}
+	return count
+}
+
+/** 本地预览用的轻量 CSV 解析（真正解析以服务端为准；这里只为预览/自动映射） */
+function detectCsvDelimiter(text) {
+	const line = firstCsvLine(text)
+	let best = ','
+	let bestCount = 0
+	for (const candidate of [',', ';', '\t']) {
+		const count = countOutsideQuotes(line, candidate)
+		if (count > bestCount) {
+			best = candidate
+			bestCount = count
+		}
+	}
+	return best
+}
+
+function parseCsvPreview(text) {
+	const raw = String(text || '').replace(/^\uFEFF/, '')
+	if (!raw.trim()) return null
+	const delimiter = detectCsvDelimiter(raw)
+	const records = []
+	let record = []
+	let field = ''
+	let inQuotes = false
+	let index = 0
+	while (index < raw.length) {
+		const char = raw[index]
+		if (inQuotes) {
+			if (char === '"') {
+				if (raw[index + 1] === '"') {
+					field += '"'
+					index += 2
+					continue
+				}
+				inQuotes = false
+				index += 1
+				continue
+			}
+			field += char
+			index += 1
+			continue
+		}
+		if (char === '"') {
+			inQuotes = true
+			index += 1
+			continue
+		}
+		if (char === delimiter) {
+			record.push(field)
+			field = ''
+			index += 1
+			continue
+		}
+		if (char === '\r') {
+			index += 1
+			continue
+		}
+		if (char === '\n') {
+			record.push(field)
+			records.push(record)
+			record = []
+			field = ''
+			index += 1
+			continue
+		}
+		field += char
+		index += 1
+	}
+	record.push(field)
+	records.push(record)
+
+	const clean = records.filter((cells) => cells.some((cell) => String(cell || '').trim() !== ''))
+	if (!clean.length) return null
+
+	const seen = new Map()
+	const headers = clean[0].map((cell, cellIndex) => {
+		let name = String(cell || '').trim() || `列${cellIndex + 1}`
+		const count = (seen.get(name) || 0) + 1
+		seen.set(name, count)
+		if (count > 1) name = `${name}_${count}`
+		return name
+	})
+	const dataRecords = clean.slice(1)
+	const rows = []
+	const warnings = []
+	let mismatched = 0
+	for (const cells of dataRecords) {
+		if (rows.length >= BATCH_PREVIEW_MAX_ROWS) break
+		if (cells.length !== headers.length) mismatched += 1
+		const row = Object.create(null)
+		headers.forEach((header, headerIndex) => {
+			row[header] = cells[headerIndex] !== undefined ? String(cells[headerIndex]) : ''
+		})
+		rows.push(row)
+	}
+	if (mismatched > 0) {
+		warnings.push(`有 ${mismatched} 行的列数和表头不一致，缺的列按空值处理（以服务端解析为准）`)
+	}
+	if (dataRecords.length > BATCH_PREVIEW_MAX_ROWS) {
+		warnings.push(`本地只预览前 ${BATCH_PREVIEW_MAX_ROWS} 行，实际行数以服务端解析为准`)
+	}
+	return { headers, rows, total: dataRecords.length, delimiter, warnings }
+}
+
+function autoMapBatchVariables() {
+	const batch = state.batch
+	if (!batch || !batch.preview) return
+	const mapping = Object.create(null)
+	for (const variable of variableDefs()) {
+		const name = String((variable && variable.name) || '')
+		if (!name) continue
+		const match = batch.preview.headers.find(
+			(header) => normalizeHeaderKey(header) === normalizeHeaderKey(name)
+		)
+		mapping[name] = match || ''
+	}
+	batch.mapping = mapping
+}
+
+/* ------------------------------ 批量条 ---------------------------------- */
+
+function renderBatchHost() {
+	const host = $('batch-host')
+	if (!host) return
+	if (state.recording || !state.detail) {
+		setHtml(host, '')
+		return
+	}
+	const defs = variableDefs()
+	if (!defs.length) {
+		setHtml(host, '')
+		return
+	}
+	const batch = state.batch && state.batch.file === state.selectedFile ? state.batch : null
+	const running = Boolean(batch && batch.id && batch.data && batch.data.status === 'running')
+	const starting = Boolean(batch && batch.starting)
+	const finished = Boolean(batch && batch.id && batch.data && batch.data.status !== 'running')
+	const busy =
+		Boolean(state.recording) || isRunActive() || Boolean(state.login) || Boolean(state.rerecord)
+
+	let label = '📄 批量运行（CSV）'
+	if (starting) label = '📄 正在启动批量运行…'
+	else if (running) {
+		const data = batch.data
+		const total = Number(data.total) || Number(batch.total) || 0
+		label = `📄 批量运行中 ${Number(data.completed) || 0}/${total}`
+	} else if (finished) {
+		label = '📄 查看最近一批结果'
+	}
+	const hint = running
+		? '批量运行中，其它操作暂时不可用'
+		: `用一张 CSV 表格给这 ${defs.length} 个参数批量填值，每行跑一遍流程`
+	setHtml(
+		host,
+		`<div class="batch-bar">
+			<button type="button" class="btn btn-tiny btn-ghost batch-open" data-action="batch-open" ${busy ? 'disabled' : ''}>${esc(label)}</button>
+			<span class="batch-hint">${esc(hint)}</span>
+		</div>`
+	)
+}
+
+/* ------------------------------ 弹窗外壳 --------------------------------- */
+
+function openBatchModal() {
+	if (!state.detail) {
+		toast('先选一个流程', 'info')
+		return
+	}
+	if (state.recording || isRunActive() || state.login || state.rerecord) {
+		toast('录制 / 回放 / 登录 / 重录进行中，结束后再批量运行', 'info')
+		return
+	}
+	if (!variableDefs().length) {
+		toast('这个流程没有运行参数，不需要 CSV 批量', 'info')
+		return
+	}
+	const file = state.selectedFile
+	if (!state.batch || state.batch.file !== file) {
+		state.batch = Object.assign(createBatchState(), { file })
+	}
+	state.batch.ui = state.batch.id ? 'progress' : 'setup'
+	renderBatchModalShell()
+	if (state.batch.id) void pollBatch(true)
+	updateTicker()
+}
+
+function renderBatchModalShell() {
+	const previousFocus = document.activeElement
+	dom.modalRoot.innerHTML = `<div class="modal-overlay" data-modal="batch">
+		<div class="modal-card modal-batch" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+			<h3 id="modal-title">批量运行（CSV）</h3>
+			<div id="batch-modal-body" class="batch-modal-body"></div>
+			<div class="modal-actions" id="batch-modal-actions"></div>
+		</div>
+	</div>`
+	const overlay = dom.modalRoot.querySelector('.modal-overlay')
+	const onKey = (event) => {
+		if (event.key === 'Escape') {
+			event.preventDefault()
+			closeBatchModal()
+		}
+	}
+	document.addEventListener('keydown', onKey)
+	batchModalHandle = { previousFocus, onKey }
+	overlay.addEventListener('click', (event) => {
+		if (event.target === overlay) closeBatchModal()
+	})
+	renderBatchModal()
+}
+
+function closeBatchModal() {
+	if (!batchModalHandle) return
+	document.removeEventListener('keydown', batchModalHandle.onKey)
+	const previousFocus = batchModalHandle.previousFocus
+	batchModalHandle = null
+	dom.modalRoot.innerHTML = ''
+	if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus()
+	renderBatchHost()
+}
+
+function renderBatchModal() {
+	if (!batchModalHandle || !state.batch) return
+	if (state.batch.ui === 'progress' && state.batch.id) renderBatchProgress()
+	else renderBatchSetup()
+}
+
+/* ------------------------------ 配置阶段 --------------------------------- */
+
+function renderBatchSetup() {
+	const body = $('batch-modal-body')
+	const actions = $('batch-modal-actions')
+	if (!body || !actions) return
+	const batch = state.batch
+	if (!batch) return
+
+	body.innerHTML = `<p class="dialog-lead">上传或粘贴一张 CSV：第一行是列名，每一行用一套参数值跑一遍这个流程（最多 2000 行）。</p>
+		<div class="batch-source">
+			<label class="batch-file-label">选择 CSV 文件
+				<input type="file" id="batch-file" accept=".csv,text/csv" />
+			</label>
+			<span class="batch-or">或者粘贴内容</span>
+			<textarea id="batch-text" class="batch-text" rows="3" spellcheck="false" placeholder="第一行是列名，例如：&#10;name,amount&#10;张三,1200"></textarea>
+		</div>
+		<div id="batch-preview-host" class="batch-preview"></div>
+		<div class="batch-options">
+			<label class="check" title="默认不打开浏览器，批量跑得更快"><input type="checkbox" id="batch-headed" ${batch.options.showBrowser ? 'checked' : ''} /> 显示浏览器窗口</label>
+			<label class="check" title="某行失败后继续跑剩下的行"><input type="checkbox" id="batch-continue" ${batch.options.continueOnFailure ? 'checked' : ''} /> 某行失败后继续</label>
+			<label class="select-wrap" title="每行之间等多久，企业系统可以设 200-500ms 降低压力">行间隔
+				<input type="number" id="batch-delay" class="batch-delay" min="0" max="5000" step="50" value="${Number(batch.options.rowDelayMs) || 0}" /> ms
+			</label>
+		</div>
+		<div id="batch-mapping-host" class="batch-mapping"></div>
+		<p class="dialog-error" id="batch-error" hidden></p>`
+
+	const textarea = $('batch-text')
+	if (textarea) textarea.value = batch.csvText || ''
+	actions.innerHTML = `<button type="button" class="btn btn-ghost" data-action="batch-close">取消</button>
+		<button type="button" class="btn btn-primary" data-action="batch-start" ${batch.starting ? 'disabled' : ''}>开始批量运行</button>`
+	renderBatchPreviewHost()
+	renderBatchMappingHost()
+	if (batch.error) showBatchError(batch.error)
+}
+
+function renderBatchPreviewHost() {
+	const host = $('batch-preview-host')
+	if (!host) return
+	const batch = state.batch
+	if (!batch || !batch.preview) {
+		setHtml(
+			host,
+			'<p class="batch-hint">还没有 CSV 内容：选择一个 .csv 文件，或把内容粘贴到上面。</p>'
+		)
+		return
+	}
+	const preview = batch.preview
+	const headerCells = preview.headers.map((header) => `<th>${esc(header)}</th>`).join('')
+	const bodyRows = preview.rows
+		.slice(0, BATCH_PREVIEW_ROWS)
+		.map(
+			(row, rowIndex) =>
+				`<tr><td class="batch-cell-no">${rowIndex + 1}</td>${preview.headers
+					.map((header) => `<td>${esc(row[header])}</td>`)
+					.join('')}</tr>`
+		)
+		.join('')
+	const warnings = preview.warnings.length
+		? `<ul class="batch-warnings">${preview.warnings.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>`
+		: ''
+	setHtml(
+		host,
+		`<div class="batch-preview-meta">共 <b>${preview.total}</b> 行 · ${preview.headers.length} 列 · 分隔符：${esc(
+			CSV_DELIMITER_TEXT[preview.delimiter] || preview.delimiter
+		)}${batch.csvFileName ? ` · 文件：${esc(batch.csvFileName)}` : ''}</div>
+		<div class="batch-table-wrap">
+			<table class="batch-table">
+				<thead><tr><th class="batch-cell-no">#</th>${headerCells}</tr></thead>
+				<tbody>${bodyRows}</tbody>
+			</table>
+		</div>
+		<p class="batch-hint">上面只预览前 ${Math.min(BATCH_PREVIEW_ROWS, preview.rows.length)} 行，完整 ${preview.total} 行以服务端解析为准。</p>
+		${warnings}`
+	)
+}
+
+function renderBatchMappingHost() {
+	const host = $('batch-mapping-host')
+	if (!host) return
+	const batch = state.batch
+	const defs = variableDefs()
+	if (!batch || !batch.preview || !defs.length) {
+		setHtml(host, '')
+		return
+	}
+	const rows = defs
+		.map((variable) => {
+			const name = String((variable && variable.name) || '')
+			const mapped = batch.mapping[name] || ''
+			const selected = batch.preview.headers.includes(mapped) ? mapped : ''
+			const options = [
+				'<option value="">（不映射）</option>',
+				...batch.preview.headers.map(
+					(header) =>
+						`<option value="${esc(header)}" ${header === selected ? 'selected' : ''}>${esc(header)}</option>`
+				),
+			].join('')
+			return `<label class="batch-map-row ${selected ? '' : 'is-missing'}" data-map-row="${esc(name)}">
+				<code class="batch-map-var">${esc(name)}</code>
+				<span class="batch-map-arrow">→</span>
+				<select class="batch-map-select" data-var-map="${esc(name)}" aria-label="${esc(name)} 对应的 CSV 列">${options}</select>
+				<span class="batch-map-missing">未匹配</span>
+			</label>`
+		})
+		.join('')
+	setHtml(
+		host,
+		`<div class="batch-map-title">变量 → CSV 列<span class="batch-hint">（默认按同名自动匹配，可以手动改）</span></div>${rows}`
+	)
+}
+
+function setBatchCsvText(text, fileName) {
+	const batch = state.batch
+	if (!batch) return
+	batch.csvText = String(text || '')
+	if (fileName !== undefined) batch.csvFileName = String(fileName || '')
+	batch.error = ''
+	batch.preview = parseCsvPreview(batch.csvText)
+	if (batch.preview) autoMapBatchVariables()
+	renderBatchPreviewHost()
+	renderBatchMappingHost()
+	clearBatchError()
+}
+
+function onBatchTextInput(value) {
+	const batch = state.batch
+	if (!batch) return
+	batch.csvText = String(value || '')
+	batch.csvFileName = ''
+	if (batchTextTimer) window.clearTimeout(batchTextTimer)
+	batchTextTimer = window.setTimeout(() => {
+		batchTextTimer = null
+		if (!state.batch || state.batch !== batch) return
+		batch.preview = parseCsvPreview(batch.csvText)
+		if (batch.preview) autoMapBatchVariables()
+		renderBatchPreviewHost()
+		renderBatchMappingHost()
+		clearBatchError()
+	}, 160)
+}
+
+async function handleBatchFile(file) {
+	if (!file) return
+	const name = String(file.name || '')
+	if (!/\.csv$/i.test(name) && file.type !== 'text/csv') {
+		showBatchError('请选择 .csv 文件；如果是 Excel 表格，请先另存为 CSV 再上传。')
+		return
+	}
+	try {
+		const text = await file.text()
+		setBatchCsvText(text, name)
+	} catch (err) {
+		showBatchError(`读取文件失败：${err && err.message ? err.message : err}`)
+	}
+}
+
+function readBatchMapping() {
+	const mapping = Object.create(null)
+	const missing = []
+	for (const variable of variableDefs()) {
+		const name = String((variable && variable.name) || '')
+		if (!name) continue
+		const select = document.querySelector(
+			`#batch-mapping-host select[data-var-map="${name}"]`
+		)
+		const column = select ? select.value : ''
+		if (column) mapping[name] = column
+		else missing.push(name)
+	}
+	return { mapping, missing }
+}
+
+function syncBatchStartButton() {
+	const button = document.querySelector('#batch-modal-actions [data-action="batch-start"]')
+	if (!button || !state.batch) return
+	button.disabled = Boolean(state.batch.starting)
+	button.innerHTML = state.batch.starting
+		? '<span class="spinner"></span>正在启动…'
+		: '开始批量运行'
+}
+
+function showBatchError(message) {
+	const text = String(message || '')
+	if (state.batch) state.batch.error = text
+	const node = $('batch-error')
+	if (!node) {
+		if (text) toast(text, 'error')
+		return
+	}
+	node.textContent = text
+	node.hidden = !text
+}
+
+function clearBatchError() {
+	if (state.batch) state.batch.error = ''
+	const node = $('batch-error')
+	if (!node) return
+	node.textContent = ''
+	node.hidden = true
+}
+
+async function startBatchRun() {
+	const batch = state.batch
+	if (!batch || batch.starting || !state.selectedFile) return
+	if (!batch.csvText.trim()) {
+		showBatchError('请先选择一个 .csv 文件，或者把 CSV 内容粘贴到上面。')
+		return
+	}
+	if (!batch.preview || !batch.preview.total) {
+		showBatchError('这份 CSV 里没有数据行（只有表头或者是空的），请检查一下。')
+		return
+	}
+	const { mapping, missing } = readBatchMapping()
+	if (missing.length) {
+		showBatchError(
+			`CSV 里缺少这些列：${missing.join('、')}。请重新选择文件，或在上面手动改一下「变量 → CSV 列」映射。`
+		)
+		return
+	}
+	clearBatchError()
+	batch.starting = true
+	syncBatchStartButton()
+
+	try {
+		const res = await api(
+			`/api/flows/${encodeURIComponent(state.selectedFile)}/batch/start`,
+			{
+				method: 'POST',
+				body: {
+					csvText: batch.csvText,
+					...(batch.csvFileName ? { fileName: batch.csvFileName } : {}),
+					mapping,
+					options: {
+						headless: !batch.options.showBrowser,
+						stopOnFailure: !batch.options.continueOnFailure,
+						rowDelayMs: Math.max(0, Math.round(Number(batch.options.rowDelayMs) || 0)),
+					},
+				},
+			}
+		)
+		if (!res || !res.batchId) throw new Error('后端没有返回批次编号')
+		const total = Number(res.total) || (batch.preview ? batch.preview.total : 0)
+		state.batch = Object.assign(batch, {
+			id: String(res.batchId),
+			file: state.selectedFile,
+			total,
+			ui: 'progress',
+			data: normalizeBatchData({ status: 'running', total, rows: [] }),
+			starting: false,
+			stopRequested: false,
+			notified: false,
+			pollError: '',
+			error: '',
+			lastPollAt: 0,
+			mapping: res.mapping && typeof res.mapping === 'object' ? res.mapping : mapping,
+		})
+		// 立刻刷新整体状态：禁用回放/录制/重录等入口
+		renderAll()
+		renderBatchModal()
+		updateTicker()
+		void pollBatch(true)
+	} catch (err) {
+		batch.starting = false
+		syncBatchStartButton()
+		showBatchError(err && err.message ? err.message : '启动批量运行失败')
+	}
+}
+
+/* ------------------------------ 进度阶段 --------------------------------- */
+
+function normalizeBatchData(data) {
+	const payload = data && typeof data === 'object' ? data : {}
+	const status = String(payload.status || '')
+	return {
+		status: ['running', 'done', 'stopped', 'error'].includes(status) ? status : 'running',
+		total: Number(payload.total) || 0,
+		completed: Number(payload.completed) || 0,
+		okCount: Number(payload.okCount) || 0,
+		failCount: Number(payload.failCount) || 0,
+		rows: Array.isArray(payload.rows) ? payload.rows : [],
+		startedAt: payload.startedAt ? String(payload.startedAt) : '',
+		finishedAt: payload.finishedAt ? String(payload.finishedAt) : '',
+		message: payload.message ? String(payload.message) : '',
+	}
+}
+
+function renderBatchProgress() {
+	const body = $('batch-modal-body')
+	const actions = $('batch-modal-actions')
+	const batch = state.batch
+	if (!body || !actions || !batch || !batch.id) return
+
+	const data = batch.data
+	const status = data ? data.status : 'running'
+	const running = status === 'running'
+	const total = (data && Number(data.total)) || Number(batch.total) || 0
+	const completed = data ? Number(data.completed) || 0 : 0
+	const okCount = data ? Number(data.okCount) || 0 : 0
+	const failCount = data ? Number(data.failCount) || 0 : 0
+	const rows = data && Array.isArray(data.rows) ? data.rows : []
+	const filtered = batch.filterFailedOnly ? rows.filter((row) => !row.ok) : rows
+	const statusChipClass =
+		status === 'done' ? 'chip-pass' : status === 'error' ? 'chip-fail' : status === 'stopped' ? 'chip-skip' : 'chip-running'
+	const pending = Math.max(0, total - rows.length)
+	const totalMs = rows.reduce((sum, row) => sum + (Number(row && row.ms) || 0), 0)
+
+	const rowsHtml = filtered.length
+		? filtered.map((row, index) => batchRowHtml(row, index)).join('')
+		: `<p class="batch-hint">${
+				batch.filterFailedOnly
+					? '还没有失败的行。'
+					: running
+						? '正在跑第 1 行，结果会实时出现在这里…'
+						: '这个批次没有行结果。'
+			}</p>`
+
+	const progressHtml = `<progress class="batch-progress" value="${completed}" max="${total || 1}"></progress>`
+	const pollError = batch.pollError
+		? `<p class="dialog-error" id="batch-poll-error">${esc(batch.pollError)}<button type="button" class="btn btn-tiny btn-ghost" data-action="batch-retry-poll">重试</button></p>`
+		: ''
+
+	const summaryHtml =
+		running || !data
+			? ''
+			: `<div class="batch-summary ${failCount > 0 ? 'is-warn' : 'is-ok'}">
+					<span class="batch-summary-title">${status === 'stopped' ? '已停止' : status === 'error' ? '批量运行出错' : '批量运行完成'}</span>
+					<span>成功 <b>${okCount}</b> / 失败 <b>${failCount}</b> / 总耗时 ${esc(fmtDuration(totalMs))}</span>
+					${data.message ? `<span class="batch-summary-msg">${esc(data.message)}</span>` : ''}
+				</div>
+				<div class="batch-export">
+					<a class="btn btn-small btn-primary" href="/api/batches/${encodeURIComponent(batch.id)}/export.csv" download="batch-${esc(batch.id)}.csv">⬇ 导出结果 CSV</a>
+					<span class="batch-hint">导出文件可以直接用 Excel 打开（含每行状态与失败原因）</span>
+				</div>`
+
+	body.innerHTML = `<div class="batch-progress-head">
+			<span class="chip ${statusChipClass}">${esc(BATCH_STATUS_TEXT[status] || '运行中')}</span>
+			<span class="batch-progress-counts">已完成 <b>${completed}</b>/${total} · 成功 ${okCount} · 失败 ${failCount}</span>
+			${running ? '<span class="batch-hint">关闭这个窗口不会中断批量运行</span>' : ''}
+		</div>
+		${progressHtml}
+		${pollError}
+		${summaryHtml}
+		<div class="batch-row-list">
+			<div class="batch-row-list-head">
+				<span class="batch-row-list-title">每行结果${pending ? `（还有 ${pending} 行在排队）` : ''}</span>
+				<label class="check batch-filter"><input type="checkbox" id="batch-filter-failed" ${batch.filterFailedOnly ? 'checked' : ''} /> 只看失败行</label>
+			</div>
+			<div class="batch-rows">${rowsHtml}</div>
+		</div>`
+
+	if (running) {
+		actions.innerHTML = `<button type="button" class="btn btn-ghost" data-action="batch-stop" ${batch.stopRequested ? 'disabled' : ''}>${batch.stopRequested ? '正在停止…' : '停止'}</button>
+			<button type="button" class="btn btn-primary" data-action="batch-close">关闭（后台继续）</button>`
+	} else {
+		actions.innerHTML = `<button type="button" class="btn btn-ghost" data-action="batch-new">开始新的一批</button>
+			<button type="button" class="btn btn-primary" data-action="batch-close">关闭</button>`
+	}
+}
+
+function batchRowHtml(row, index) {
+	const item = row || {}
+	const rowIndex = Number(item.index) || index + 1
+	const ok = Boolean(item.ok)
+	const failed = item.failedStep || null
+	const reason = failed
+		? failed.reason
+			? String(failed.reason)
+			: failed.code
+				? CODE_TEXT[String(failed.code)] || ''
+				: ''
+		: ''
+	const ms = item.ms !== undefined && item.ms !== null ? item.ms : null
+	const thumb = assetUrl(item.screenshot)
+	const stepKind = failed && failed.kind ? KIND_TEXT[failed.kind] || failed.kind : ''
+	return `<div class="batch-row ${ok ? 'batch-row-ok' : 'batch-row-fail'}">
+		<span class="batch-row-no">${rowIndex}</span>
+		<span class="chip chip-${ok ? 'pass' : 'fail'}">${ok ? '成功' : '失败'}</span>
+		<span class="batch-row-main">
+			${reason ? `<span class="batch-row-reason">${esc(reason)}</span>` : '<span class="batch-row-reason batch-row-ok-text">这一行跑完了</span>'}
+			${!ok && stepKind ? `<span class="batch-row-step">失败步骤：${esc(stepKind)}</span>` : ''}
+		</span>
+		${ms !== null ? `<span class="step-ms">${fmtMs(ms)}</span>` : ''}
+		${thumb ? `<button type="button" class="thumb-btn" data-action="zoom" data-src="${esc(thumb)}" data-name="第 ${rowIndex} 行失败截图" aria-label="查看第 ${rowIndex} 行的失败截图"><img src="${esc(thumb)}" alt="" loading="lazy" /></button>` : ''}
+	</div>`
+}
+
+/* ------------------------------ 轮询/停止 -------------------------------- */
+
+async function pollBatch(force) {
+	const batch = state.batch
+	if (!batch || !batch.id || state.busy.batch) return
+	if (!force && batch.pollError && Date.now() - (batch.lastPollAt || 0) < 2000) return
+	const batchId = batch.id
+	batch.lastPollAt = Date.now()
+	state.busy.batch = true
+
+	try {
+		const data = await api(`/api/batches/${encodeURIComponent(batchId)}`)
+		if (!state.batch || state.batch.id !== batchId) return
+		const previousStatus = state.batch.data ? state.batch.data.status : ''
+		state.batch.data = normalizeBatchData(data)
+		state.batch.pollError = ''
+		const nextStatus = state.batch.data.status
+		if (previousStatus !== nextStatus) {
+			// running → done/stopped/error：恢复其它按钮与步骤区
+			renderAll()
+		} else {
+			renderBatchHost()
+		}
+		if (state.batch.ui === 'progress' && batchModalHandle) renderBatchModal()
+		notifyBatchFinished()
+	} catch (err) {
+		if (!state.batch || state.batch.id !== batchId) return
+		state.batch.pollError = err && err.message ? err.message : '读取批次进度失败'
+		if (state.batch.ui === 'progress' && batchModalHandle) renderBatchModal()
+	} finally {
+		state.busy.batch = false
+		updateTicker()
+	}
+}
+
+function notifyBatchFinished() {
+	const batch = state.batch
+	if (!batch || batch.notified) return
+	const data = batch.data
+	if (!data || data.status === 'running') return
+	batch.notified = true
+	if (data.status === 'error') {
+		toast(`批量运行出错：${data.message || '原因见弹窗'}`, 'error')
+		return
+	}
+	const parts = [`成功 ${data.okCount}`, `失败 ${data.failCount}`]
+	toast(
+		data.status === 'stopped' ? `批量运行已停止（${parts.join('，')}）` : `批量运行完成（${parts.join('，')}）`,
+		data.failCount > 0 ? 'error' : 'success'
+	)
+}
+
+async function stopBatchRun() {
+	const batch = state.batch
+	if (!batch || !batch.id || batch.stopRequested) return
+	batch.stopRequested = true
+	renderBatchModal()
+	try {
+		await api(`/api/batches/${encodeURIComponent(batch.id)}/stop`, { method: 'POST' })
+		toast('已发送停止请求，当前这行跑完就停', 'info')
+	} catch (err) {
+		batch.stopRequested = false
+		batch.pollError = `停止失败：${err && err.message ? err.message : err}`
+		renderBatchModal()
+		return
+	}
+	updateTicker()
+	void pollBatch(true)
+}
+
+function resetBatchToSetup() {
+	const batch = state.batch
+	if (!batch || isBatchRunning()) return
+	batch.ui = 'setup'
+	batch.id = ''
+	batch.data = null
+	batch.total = 0
+	batch.notified = false
+	batch.stopRequested = false
+	batch.error = ''
+	batch.pollError = ''
+	renderModalOrAll()
+	updateTicker()
+}
+
+function renderModalOrAll() {
+	if (batchModalHandle) renderBatchModal()
+	renderAll()
+}
+
+/* ------------------------------ 事件处理 --------------------------------- */
+
+function handleChange(event) {
+	const target = event.target
+	if (!(target instanceof HTMLElement)) return
+	if (target instanceof HTMLInputElement && target.id === 'batch-file') {
+		const file = target.files && target.files[0]
+		if (file) void handleBatchFile(file)
+		return
+	}
+	if (target instanceof HTMLSelectElement && target.matches('select[data-var-map]')) {
+		const batch = state.batch
+		if (!batch) return
+		const name = target.getAttribute('data-var-map') || ''
+		batch.mapping[name] = target.value
+		const row = target.closest('.batch-map-row')
+		if (row) row.classList.toggle('is-missing', !target.value)
+		clearBatchError()
+		return
+	}
+	if (!(target instanceof HTMLInputElement)) return
+	if (target.id === 'batch-headed') {
+		if (state.batch) state.batch.options.showBrowser = target.checked
+		return
+	}
+	if (target.id === 'batch-continue') {
+		if (state.batch) state.batch.options.continueOnFailure = target.checked
+		return
+	}
+	if (target.id === 'batch-filter-failed') {
+		if (state.batch) state.batch.filterFailedOnly = target.checked
+		renderBatchModal()
+	}
+}
+
 /* ------------------------------ 流程列表 -------------------------------- */
 
 async function loadConfig() {
@@ -1538,6 +2367,9 @@ async function selectFlow(file) {
 	state.suggestionsError = ''
 	state.ignoredSuggestions = new Set()
 	state.showIgnoredSuggestions = false
+	if (state.batch && state.batch.file && state.batch.file !== file && !isBatchBusy()) {
+		state.batch = null
+	}
 	ensureProfiles()
 	renderAll()
 
@@ -2111,7 +2943,7 @@ function stepRowHtml(step, index, allSteps, results, allowDelete) {
 			${thumb ? `<button type="button" class="thumb-btn" data-action="zoom" data-src="${esc(thumb)}" data-name="第 ${no} 步 ${esc(title)}" aria-label="查看这一步的截图"><img src="${esc(thumb)}" alt="" loading="lazy" /></button>` : ''}
 			${
 				allowDelete && item.id && item.kind !== 'group'
-					? `<button type="button" class="btn btn-tiny btn-ghost" data-action="rerecord-start" data-step-id="${esc(item.id)}" ${state.recording || isRunActive() || state.login || state.rerecord ? 'disabled' : ''} title="只重录这一步，不用整条重来">重录</button>`
+					? `<button type="button" class="btn btn-tiny btn-ghost" data-action="rerecord-start" data-step-id="${esc(item.id)}" ${rerecordBusy() ? 'disabled' : ''} title="只重录这一步，不用整条重来">重录</button>`
 					: ''
 			}
 			${allowDelete && item.id ? `<button type="button" class="btn btn-tiny btn-ghost" data-action="delete-step" data-step-id="${esc(item.id)}">删除</button>` : ''}
@@ -2156,6 +2988,7 @@ function renderBottom() {
 
 	renderSuggestHost()
 	renderVarsHost()
+	renderBatchHost()
 	renderRunHost()
 	updatePlayControls()
 }
@@ -2181,6 +3014,7 @@ function bottomShellHtml() {
 	</div>
 	<div id="suggest-host" class="suggest-host"></div>
 	<div id="vars-host" class="vars-host"></div>
+	<div id="batch-host" class="batch-host"></div>
 	<div id="run-host" class="run-host"></div>`
 }
 
@@ -3034,7 +3868,8 @@ async function deleteStep(stepId) {
 function updateTicker() {
 	const needed =
 		Boolean(state.recording) ||
-		Boolean(state.run && state.run.runId && state.run.status === 'running')
+		Boolean(state.run && state.run.runId && state.run.status === 'running') ||
+		isBatchPollingNeeded()
 
 	if (needed && !state.ticker) state.ticker = window.setInterval(tick, POLL_MS)
 	if (!needed && state.ticker) {
@@ -3047,6 +3882,7 @@ function tick() {
 	try {
 		if (state.recording && !state.recording.stopping) void pollRecord()
 		if (state.run && state.run.runId && state.run.status === 'running') void pollRun()
+		if (isBatchPollingNeeded()) void pollBatch()
 	} catch (err) {
 		showErrorBanner(`刷新进度时出错：${err && err.message ? err.message : err}`)
 	}
@@ -3171,6 +4007,24 @@ function handleClick(event) {
 		case 'rerecord-cancel':
 			void cancelRerecord()
 			return
+		case 'batch-open':
+			void openBatchModal()
+			return
+		case 'batch-close':
+			closeBatchModal()
+			return
+		case 'batch-start':
+			void startBatchRun()
+			return
+		case 'batch-stop':
+			void stopBatchRun()
+			return
+		case 'batch-new':
+			resetBatchToSetup()
+			return
+		case 'batch-retry-poll':
+			void pollBatch(true)
+			return
 		default:
 			return
 	}
@@ -3178,6 +4032,15 @@ function handleClick(event) {
 
 function handleInput(event) {
 	const target = event.target
+	if (!(target instanceof HTMLElement)) return
+	if (target instanceof HTMLTextAreaElement && target.id === 'batch-text') {
+		onBatchTextInput(target.value)
+		return
+	}
+	if (target instanceof HTMLInputElement && target.id === 'batch-delay') {
+		if (state.batch) state.batch.options.rowDelayMs = Math.max(0, Number(target.value) || 0)
+		return
+	}
 	if (!(target instanceof HTMLInputElement)) return
 	const name = target.getAttribute('data-var')
 	if (name === null) return
@@ -3223,6 +4086,7 @@ function bindEvents() {
 
 	document.addEventListener('click', handleClick)
 	document.addEventListener('input', handleInput)
+	document.addEventListener('change', handleChange)
 	document.addEventListener('keydown', handleKeydown)
 
 	// 截图加载失败时不刷 console，直接隐藏坏图（后端可能还没产出 artifact）
