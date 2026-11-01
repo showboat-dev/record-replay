@@ -1,0 +1,581 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxj1in7_uyt7w8",
+  "title": "/basic",
+  "version": 1,
+  "createdAt": "2026-11-01T07:47:11.018Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5199/basic",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "full-name",
+            "name": "fullName",
+            "type": "text",
+            "autocomplete": "name",
+            "placeholder": "请输入姓名",
+            "data-testid": "field-full-name"
+          },
+          "rect": {
+            "x": 327,
+            "y": 243.95,
+            "width": 786,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519230663
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "field-full-name",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "姓名",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "姓名",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "姓名",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#full-name",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"fullName\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"请输入姓名\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "姓名",
+          "attrs": {
+            "id": "full-name",
+            "name": "fullName",
+            "type": "text",
+            "placeholder": "请输入姓名",
+            "data-testid": "field-full-name"
+          },
+          "stableHash": "6f8a8db7f85710018eab7b0060bf31e8f6a4e5ec",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #full-name [testid=field-full-name] role=textbox name=\"姓名\"",
+        "nearbyText": [
+          "姓名",
+          "密码"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "value": "alice",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "email",
+            "name": "email",
+            "type": "email",
+            "autocomplete": "email",
+            "placeholder": "name@example.com",
+            "data-testid": "field-email"
+          },
+          "rect": {
+            "x": 327,
+            "y": 406.73,
+            "width": 786,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519230762
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "field-email",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "邮箱",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "邮箱",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "邮箱",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#email",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"email\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"name@example.com\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[6]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "邮箱",
+          "attrs": {
+            "id": "email",
+            "name": "email",
+            "type": "email",
+            "placeholder": "name@example.com",
+            "data-testid": "field-email"
+          },
+          "stableHash": "99dad17b5ee5a467f5f00ed07cb9ddd4bd014388",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            5
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #email [testid=field-email] role=textbox name=\"邮箱\"",
+        "nearbyText": [
+          "邮箱",
+          "简介"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "value": "alice@example.com",
+      "clear": true
+    },
+    {
+      "id": "s3",
+      "kind": "select",
+      "target": {
+        "observed": {
+          "tag": "select",
+          "attributes": {
+            "id": "country",
+            "name": "country",
+            "data-testid": "field-country"
+          },
+          "text": "中国",
+          "rect": {
+            "x": 327,
+            "y": 622.27,
+            "width": 786,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519230843
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "field-country",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "combobox",
+              "name": "国家",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "combobox",
+              "name": "国家",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "国家",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#country",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "select[name=\"country\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[10]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "select",
+          "role": "combobox",
+          "accessibleName": "国家",
+          "attrs": {
+            "id": "country",
+            "name": "country",
+            "data-testid": "field-country"
+          },
+          "stableHash": "b227ea2fba00306d2e00546c7fdd07733baa7145",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            9
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "select #country [testid=field-country] role=combobox name=\"国家\"",
+        "nearbyText": [
+          "国家",
+          "订阅产品更新"
+        ],
+        "crop": {
+          "ref": "record/elements/2.png",
+          "dpr": 1
+        }
+      },
+      "value": "cn"
+    },
+    {
+      "id": "s4",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "div",
+            "attributes": {
+              "id": "basic-result",
+              "role": "status",
+              "aria-live": "polite",
+              "data-testid": "basic-result"
+            },
+            "text": "提交成功（第 1 次） 姓名: alice 密码长度: 0 邮箱: alice@example.com 国家: cn 订阅: 否 套餐: basic 简介: （空）",
+            "rect": {
+              "x": 327,
+              "y": 883.08,
+              "width": 786,
+              "height": 208
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793519231008
+          },
+          "candidates": [
+            {
+              "kind": "testid",
+              "value": "basic-result",
+              "score": 10,
+              "source": "record"
+            },
+            {
+              "kind": "role",
+              "value": {
+                "role": "status"
+              },
+              "score": 46,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "#basic-result",
+              "score": 100,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[2]/*[1]/*[3]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "div",
+            "role": "status",
+            "attrs": {
+              "id": "basic-result",
+              "role": "status",
+              "data-testid": "basic-result"
+            },
+            "stableHash": "d1fa07576662c858c3b510c9b34157d9def2f98f",
+            "nodePath": [
+              1,
+              1,
+              0,
+              2
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "div #basic-result [testid=basic-result] role=status text=\"提交成功（第 1 次） 姓名: alice 密码长度: 0 邮箱: alice@…\"",
+          "nearbyText": [
+            "姓名 密码 邮箱 简介 国家 请选择 中国 美国 日本 订阅产品更新 套餐 基础版 专业版 提交表单 重置 动态 class 按钮"
+          ]
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "submit",
+            "id": "submit-basic",
+            "data-testid": "submit-basic"
+          },
+          "text": "提交表单",
+          "rect": {
+            "x": 327,
+            "y": 827.83,
+            "width": 90,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519230925
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "submit-basic",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "提交表单",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "提交表单",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "提交表单",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#submit-basic",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[13]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "提交表单",
+          "attrs": {
+            "type": "submit",
+            "id": "submit-basic",
+            "data-testid": "submit-basic"
+          },
+          "stableHash": "9e6be68cc5e715fc7d2b86b115c5cf7863786bcc",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            12,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #submit-basic [testid=submit-basic] role=button name=\"提交表单\"",
+        "nearbyText": [
+          "重置"
+        ],
+        "crop": {
+          "ref": "record/elements/3.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

@@ -1,0 +1,393 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxixjtw_sgtjy9",
+  "title": "/iframe-same",
+  "version": 1,
+  "createdAt": "2026-11-01T07:44:05.638Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5199/iframe-same",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "inner-name",
+            "name": "innerName",
+            "type": "text",
+            "placeholder": "请输入内部姓名",
+            "data-testid": "inner-name"
+          },
+          "rect": {
+            "x": 37,
+            "y": 70.95,
+            "width": 710,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 173
+          },
+          "viewport": {
+            "width": 784,
+            "height": 298
+          },
+          "dpr": 1,
+          "recordedAt": 1793519045457
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "inner-name",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "内部姓名",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "内部姓名",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "内部姓名",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#inner-name",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"innerName\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"请输入内部姓名\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "内部姓名",
+          "attrs": {
+            "id": "inner-name",
+            "name": "innerName",
+            "type": "text",
+            "placeholder": "请输入内部姓名",
+            "data-testid": "inner-name"
+          },
+          "stableHash": "ecd71cec103e517493779cdb07f67bcd737e8302",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": [
+            {
+              "kind": "frameElement",
+              "anchor": {
+                "observed": {
+                  "tag": "iframe",
+                  "attributes": {
+                    "id": "same-frame",
+                    "name": "innerForm",
+                    "title": "同源内部表单"
+                  },
+                  "rect": {
+                    "x": 327,
+                    "y": 218.19,
+                    "width": 786,
+                    "height": 300
+                  },
+                  "scroll": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "viewport": {
+                    "width": 1440,
+                    "height": 900
+                  },
+                  "dpr": 1,
+                  "recordedAt": 1793519045542
+                },
+                "candidates": [
+                  {
+                    "kind": "css",
+                    "value": "#same-frame",
+                    "score": 100,
+                    "source": "record"
+                  },
+                  {
+                    "kind": "css",
+                    "value": "iframe[name=\"innerForm\"]",
+                    "score": 150,
+                    "source": "record"
+                  },
+                  {
+                    "kind": "xpath",
+                    "value": "/html/*[2]/*[2]/*[1]/*[2]",
+                    "score": 900,
+                    "source": "record"
+                  }
+                ],
+                "fingerprint": {
+                  "tag": "iframe",
+                  "role": "iframe",
+                  "attrs": {
+                    "id": "same-frame",
+                    "name": "innerForm",
+                    "title": "同源内部表单"
+                  },
+                  "stableHash": "1ed86481725d05b9f9c89adf49a2876171a8ab47",
+                  "nodePath": [
+                    1,
+                    1,
+                    0,
+                    1
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "urlPattern",
+              "pattern": "http://127.0.0.1:5199/inner-form"
+            }
+          ]
+        },
+        "description": "input #inner-name [testid=inner-name] role=textbox name=\"内部姓名\"",
+        "nearbyText": [
+          "内部姓名",
+          "内部提交 重置"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "value": "nested-bob",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "submit",
+            "id": "inner-submit",
+            "data-testid": "inner-submit"
+          },
+          "text": "内部提交",
+          "rect": {
+            "x": 37,
+            "y": 128.2,
+            "width": 90,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 173
+          },
+          "viewport": {
+            "width": 784,
+            "height": 298
+          },
+          "dpr": 1,
+          "recordedAt": 1793519045557
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "inner-submit",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "内部提交",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "内部提交",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#inner-submit",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[3]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "内部提交",
+          "attrs": {
+            "type": "submit",
+            "id": "inner-submit",
+            "data-testid": "inner-submit"
+          },
+          "stableHash": "4c6ac572cc3cfee42e0c6ef12ab9a8d0ff427b8c",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            2,
+            0
+          ]
+        },
+        "frame": {
+          "path": [
+            {
+              "kind": "frameElement",
+              "anchor": {
+                "observed": {
+                  "tag": "iframe",
+                  "attributes": {
+                    "id": "same-frame",
+                    "name": "innerForm",
+                    "title": "同源内部表单"
+                  },
+                  "rect": {
+                    "x": 327,
+                    "y": 218.19,
+                    "width": 786,
+                    "height": 300
+                  },
+                  "scroll": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "viewport": {
+                    "width": 1440,
+                    "height": 900
+                  },
+                  "dpr": 1,
+                  "recordedAt": 1793519045625
+                },
+                "candidates": [
+                  {
+                    "kind": "css",
+                    "value": "#same-frame",
+                    "score": 100,
+                    "source": "record"
+                  },
+                  {
+                    "kind": "css",
+                    "value": "iframe[name=\"innerForm\"]",
+                    "score": 150,
+                    "source": "record"
+                  },
+                  {
+                    "kind": "xpath",
+                    "value": "/html/*[2]/*[2]/*[1]/*[2]",
+                    "score": 900,
+                    "source": "record"
+                  }
+                ],
+                "fingerprint": {
+                  "tag": "iframe",
+                  "role": "iframe",
+                  "attrs": {
+                    "id": "same-frame",
+                    "name": "innerForm",
+                    "title": "同源内部表单"
+                  },
+                  "stableHash": "1ed86481725d05b9f9c89adf49a2876171a8ab47",
+                  "nodePath": [
+                    1,
+                    1,
+                    0,
+                    1
+                  ]
+                }
+              }
+            },
+            {
+              "kind": "urlPattern",
+              "pattern": "http://127.0.0.1:5199/inner-form"
+            }
+          ]
+        },
+        "description": "button #inner-submit [testid=inner-submit] role=button name=\"内部提交\"",
+        "nearbyText": [
+          "重置"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

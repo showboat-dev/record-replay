@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxixisz_n1qso2",
+  "title": "/shadow-closed",
+  "version": 1,
+  "createdAt": "2026-11-01T07:44:04.591Z",
+  "meta": {
+    "env": {
+      "startUrl": "http://127.0.0.1:5199/shadow-closed",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "div",
+            "attributes": {
+              "id": "closed-result",
+              "role": "status",
+              "aria-live": "polite",
+              "data-testid": "closed-result"
+            },
+            "text": "宿主外按钮（light DOM）点击成功，第 1 次（对照组）",
+            "rect": {
+              "x": 327,
+              "y": 522.42,
+              "width": 786,
+              "height": 45.25
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793519044500
+          },
+          "candidates": [
+            {
+              "kind": "testid",
+              "value": "closed-result",
+              "score": 10,
+              "source": "record"
+            },
+            {
+              "kind": "role",
+              "value": {
+                "role": "status"
+              },
+              "score": 46,
+              "source": "record"
+            },
+            {
+              "kind": "text",
+              "value": "宿主外按钮（light DOM）点击成功，第 1 次（对照组）",
+              "score": 70,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "#closed-result",
+              "score": 100,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[2]/*[1]/*[4]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "div",
+            "role": "status",
+            "attrs": {
+              "id": "closed-result",
+              "role": "status",
+              "data-testid": "closed-result"
+            },
+            "stableHash": "ed0ae5faa4fa1ad64b66217d75c30a5838b02721",
+            "nodePath": [
+              1,
+              1,
+              0,
+              3
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "div #closed-result [testid=closed-result] role=status text=\"宿主外按钮（light DOM）点击成功，第 1 次（对照组）\"",
+          "nearbyText": [
+            "探测 shadowRoot（预期 null） 宿主外按钮（对照组）",
+            "收到 composed 事件: value= clicks=1宿主外按钮点击（第 1 次）"
+          ]
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "x-closed-card",
+          "attributes": {
+            "id": "closed-card",
+            "data-testid": "closed-card",
+            "aria-label": "关闭式组件卡片",
+            "data-clicks": "1",
+            "data-last-value": ""
+          },
+          "rect": {
+            "x": 327,
+            "y": 238.7,
+            "width": 786,
+            "height": 212.47
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519044426,
+          "shadowRootType": "closed",
+          "innerOffset": {
+            "x": 68,
+            "y": 144.3
+          }
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "closed-card",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "关闭式组件卡片",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#closed-card",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "x-closed-card",
+          "attrs": {
+            "id": "closed-card",
+            "data-testid": "closed-card",
+            "aria-label": "关闭式组件卡片",
+            "data-clicks": "1"
+          },
+          "stableHash": "3a89841d010117c442bf7f4d723ab5c3b5b6d696",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "x-closed-card #closed-card [testid=closed-card]",
+        "nearbyText": [
+          "closed shadow 组件",
+          "探测 shadowRoot（预期 null） 宿主外按钮（对照组）"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": [],
+      "position": {
+        "x": 68,
+        "y": 144.3
+      }
+    },
+    {
+      "id": "s2",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "div",
+            "attributes": {
+              "id": "closed-result",
+              "role": "status",
+              "aria-live": "polite",
+              "data-testid": "closed-result"
+            },
+            "text": "宿主外按钮（light DOM）点击成功，第 1 次（对照组）",
+            "rect": {
+              "x": 327,
+              "y": 522.42,
+              "width": 786,
+              "height": 45.25
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793519044581
+          },
+          "candidates": [
+            {
+              "kind": "testid",
+              "value": "closed-result",
+              "score": 10,
+              "source": "record"
+            },
+            {
+              "kind": "role",
+              "value": {
+                "role": "status"
+              },
+              "score": 46,
+              "source": "record"
+            },
+            {
+              "kind": "text",
+              "value": "宿主外按钮（light DOM）点击成功，第 1 次（对照组）",
+              "score": 70,
+              "source": "record"
+            },
+            {
+              "kind": "css",
+              "value": "#closed-result",
+              "score": 100,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[2]/*[1]/*[4]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "div",
+            "role": "status",
+            "attrs": {
+              "id": "closed-result",
+              "role": "status",
+              "data-testid": "closed-result"
+            },
+            "stableHash": "ed0ae5faa4fa1ad64b66217d75c30a5838b02721",
+            "nodePath": [
+              1,
+              1,
+              0,
+              3
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "div #closed-result [testid=closed-result] role=status text=\"宿主外按钮（light DOM）点击成功，第 1 次（对照组）\"",
+          "nearbyText": [
+            "探测 shadowRoot（预期 null） 宿主外按钮（对照组）",
+            "收到 composed 事件: value= clicks=1宿主外按钮点击（第 1 次）"
+          ]
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "button",
+            "id": "outside-btn",
+            "data-testid": "outside-btn"
+          },
+          "text": "宿主外按钮（对照组）",
+          "rect": {
+            "x": 573.89,
+            "y": 467.17,
+            "width": 180,
+            "height": 41.25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519044516
+        },
+        "candidates": [
+          {
+            "kind": "testid",
+            "value": "outside-btn",
+            "score": 10,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "宿主外按钮（对照组）",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "宿主外按钮（对照组）",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "宿主外按钮（对照组）",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#outside-btn",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[3]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "宿主外按钮（对照组）",
+          "attrs": {
+            "type": "button",
+            "id": "outside-btn",
+            "data-testid": "outside-btn"
+          },
+          "stableHash": "d131197d7624b73e94d382203a02458c8658d226",
+          "nodePath": [
+            1,
+            1,
+            0,
+            2,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #outside-btn [testid=outside-btn] role=button name=\"宿主外按钮（对照组）\"",
+        "nearbyText": [
+          "探测 shadowRoot（预期 null）"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}
