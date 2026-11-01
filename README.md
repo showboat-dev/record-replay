@@ -41,12 +41,33 @@ docs/          架构契约（architecture.md）、spike 结论
 - [../产品设计-录制回放-v0.1.md](../产品设计-录制回放-v0.1.md) —— 产品设计
 - [../refs/README.md](../refs/README.md) —— 14 个参考仓库索引
 
-## 状态
+## 状态（M0 + M1 已完成）
 
-| 模块 | 状态 |
-|---|---|
-| IR（schema + 契约 + 18 单测） | ✅ M0 |
-| fixture 测试站 | 🚧 M0 |
-| Spike A/B | 🚧 M0 |
-| recorder / resolver / executor / ai / harness | ⏳ M1 |
-| CLI | 骨架可用（inspect 已实现） |
+| 模块 | 状态 | 证据 |
+|---|---|---|
+| IR（schema + 契约） | ✅ | 20 单测（含 closed shadow/canvas 坐标契约） |
+| fixture 测试站（11 难场景路由 + 双端口跨域） | ✅ | 27 条 curl + 81 条 Playwright 冒烟 |
+| Spike A/B（closed shadow / iframe ref） | ✅ | `docs/spikes.md`（847 行，实测结论） |
+| recorder | ✅ | capture.js + 合流 + Node 侧候选校验 + closed shadow host/offset + iframe 链；67 单测 |
+| resolver（L1 + L2） | ✅ | 34 单测；L2 抹掉语义候选后 4/4 命中；歧义 15% 拒绝猜测 |
+| executor | ✅ | 协议 13 种 step；失败必产 artifact；71 单测 + 14 个真实浏览器冒烟 |
+| ai（默认关闭） | ✅ | 46 单测（mock fetch）；脱敏/护栏/缓存/ref 生命周期 |
+| harness + CLI | ✅ | 站点清单/统计/HTML 报告；`rr harness` 6 站 18/18 通过 |
+| e2e（录→放 3 次） | ✅ | `e2e/record-play.test.ts` 通过 |
+
+### 当前基线（`pnpm rr harness --runs 3 --sites local`）
+
+```
+6/11 站有 flow · 18/18 runs 100% 通过 · 42 步全部 L1
+P50 93ms / P95 354ms
+```
+
+已录 flow：`basic` / `iframe-same` / `shadow-closed` / `controlled` / `custom-select` / `spa`。
+待补：`iframe-cross` / `canvas`（需要坐标） / `virtual-list` / `upload-download` / `dialog` → M2。
+
+## 下一步（M2）
+
+1. 补齐 11 条本地 flow（canvas 用 `click.position`、upload 用 `setInputFiles`、dialog 用 dialog 策略）
+2. 20 条 flow × 10 runs，目标 ≥85%；失败分类统计与归因
+3. 加 L2 增强（属性交集）与 expect（textChange/区域 hash）——按数据决定
+4. `stableHash` 上移到 `@rr/schema`，去掉跨包复刻
