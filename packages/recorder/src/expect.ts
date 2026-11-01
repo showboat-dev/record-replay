@@ -12,21 +12,15 @@ import type { Expect } from '@rr/schema'
 
 import type { PageSignature, SignatureNode } from './types.js'
 
-/** role 优先级：出现这些通常就是用户真正关心的反馈（toast / 对话框 / 标题） */
-const ROLE_PRIORITY = [
-	'alert',
-	'status',
-	'dialog',
-	'alertdialog',
-	'heading',
-	'link',
-	'button',
-	'tabpanel',
-	'menuitem',
-]
+/** role 优先级：只保留高置信「用户真正关心的反馈」（toast / 对话框 / 标题类） */
+const ROLE_PRIORITY = ['alert', 'status', 'dialog', 'alertdialog']
 
-/** tag 优先级：这些元素出现通常意味着「有新东西渲染出来了」 */
-const TAG_PRIORITY = ['dialog', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'output', 'li', 'p', 'button', 'a', 'input', 'select', 'textarea']
+/**
+ * tag 优先级：只保留语义强、不易随列表/数据变化的元素。
+ * 真实站点回归后收窄：li / p / a / button / input 在动态列表、下拉、筛选场景里
+ * 会频繁「出现又消失」，据此推断 elementVisible 会制造 flaky（TodoMVC 筛选、AntD 下拉都踩过）。
+ */
+const TAG_PRIORITY = ['dialog', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'output']
 
 /** 这些 tag 只在没有更好候选时才用（容器类，面积大、语义弱） */
 const WEAK_TAGS = new Set(['html', 'body', 'main', 'section', 'article', 'form', 'div', 'span'])
@@ -58,7 +52,15 @@ export function appearedNodes(before: PageSignature, after: PageSignature): Sign
  * 排序维度：role 优先级 > 有文本 > 面积小 > DOM 顺序靠后（越靠后越像「新插入的反馈」）。
  */
 export function pickExpectTarget(nodes: SignatureNode[]): SignatureNode | undefined {
-	const usable = nodes.filter((n) => !WEAK_TAGS.has(n.tag) || hasText(n))
+	// 尺寸为 0 的节点（隐藏输入框、关闭的下拉选项）一律不选：
+	// 录制时它们可能刚好在 DOM 里，但回放时往往不可见/不存在
+	// 白名单：只接受「语义强、非列表项」的元素。列表项/链接/按钮/输入在动态页面里
+	// 会随数据渲染频繁出现消失，据此断言 elementVisible 是 flaky 的主要来源。
+	const ALLOWED_TAGS = new Set(['dialog', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'output'])
+	const ALLOWED_ROLES = new Set(['alert', 'status', 'dialog', 'alertdialog'])
+	const usable = nodes
+		.filter((n) => n.rect.width >= 1 && n.rect.height >= 1)
+		.filter((n) => ALLOWED_TAGS.has(n.tag) || ALLOWED_ROLES.has(n.role ?? ''))
 	if (!usable.length) return undefined
 	const scored = usable.map((node, index) => ({ node, index, score: scoreNode(node) }))
 	scored.sort((a, b) => {
@@ -104,7 +106,9 @@ export function urlPattern(rawUrl: string): string {
 	} catch {
 		return rawUrl
 	}
-	const segments = url.pathname.split('/').map((segment) => (isDynamicSegment(segment) ? '*' : segment))
+	const segments = url.pathname
+		.split('/')
+		.map((segment) => (isDynamicSegment(segment) ? '*' : segment))
 	let pattern = `${url.origin}${segments.join('/')}`
 	if (url.search) pattern += '?*'
 	return pattern

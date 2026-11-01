@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjyzr0_rctpto",
+  "title": "/en-US/component/select.html",
+  "version": 1,
+  "createdAt": "2026-11-01T08:13:17.640Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://element-plus.org/en-US/component/select.html",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "ul",
+            "attributes": {
+              "id": "el-id-1024-0",
+              "role": "listbox",
+              "aria-orientation": "vertical"
+            },
+            "text": "Option1Option2Option3Option4Option5",
+            "rect": {
+              "x": 357,
+              "y": 676,
+              "width": 238,
+              "height": 182
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793520793899
+          },
+          "candidates": [
+            {
+              "kind": "role",
+              "value": {
+                "role": "listbox"
+              },
+              "score": 46,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[1]/*[1]/*[1]/*[1]/*[1]/*[1]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "ul",
+            "role": "listbox",
+            "attrs": {
+              "role": "listbox"
+            },
+            "stableHash": "96878cf2ee9fcbdd62bb68ff0c6cd5fcd2566233",
+            "nodePath": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "ul #el-id-1024-0 role=listbox text=\"Option1Option2Option3Option4Option5\""
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "div",
+          "attributes": {},
+          "text": "Select",
+          "rect": {
+            "x": 367.5,
+            "y": 635.17,
+            "width": 196,
+            "height": 24
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520793803
+        },
+        "candidates": [
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[6]/*[1]/*[1]/*[1]/*[1]/*[7]/*[1]/*[1]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "div",
+          "role": "text",
+          "attrs": {},
+          "stableHash": "f2c81e9e0bab465f782d3d5ab26041d129477430",
+          "nodePath": [
+            1,
+            1,
+            0,
+            5,
+            0,
+            0,
+            0,
+            0,
+            6,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "div role=text text=\"Select\"",
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s2",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "p",
+            "attributes": {
+              "data-v-89d0a259": ""
+            },
+            "text": "Pagination",
+            "rect": {
+              "x": 50,
+              "y": 1693.19,
+              "width": 166,
+              "height": 20
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793520797601
+          },
+          "candidates": [
+            {
+              "kind": "text",
+              "value": "Pagination",
+              "score": 70,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[2]/*[1]/*[5]/*[1]/*[1]/*[1]/*[2]/*[5]/*[12]/*[1]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "p",
+            "role": "paragraph",
+            "attrs": {},
+            "stableHash": "21edea25e6559b5073a67dadca7bd290f7e220ee",
+            "nodePath": [
+              1,
+              1,
+              0,
+              4,
+              0,
+              0,
+              0,
+              1,
+              4,
+              11,
+              0
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "p role=paragraph text=\"Pagination\""
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "li",
+          "attributes": {
+            "id": "el-id-1024-3",
+            "role": "option",
+            "aria-selected": "true"
+          },
+          "text": "Option2",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520794568
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "option"
+            },
+            "score": 46,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "Option2",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[1]/*[1]/*[1]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "li",
+          "role": "option",
+          "attrs": {
+            "role": "option"
+          },
+          "stableHash": "fffc058de0b184eddbb8e081be1b159cfab7781c",
+          "nodePath": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "li #el-id-1024-3 role=option text=\"Option2\"（候选未能唯一命中，已保留启发式顺序）",
+        "nearbyText": [
+          "Option1",
+          "Option3"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

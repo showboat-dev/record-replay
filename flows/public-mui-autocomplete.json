@@ -1,0 +1,287 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjm7aw_wylz3k",
+  "title": "/material-ui/react-autocomplete/",
+  "version": 1,
+  "createdAt": "2026-11-01T08:03:19.717Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://mui.com/material-ui/react-autocomplete/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "aria-invalid": "false",
+            "autocomplete": "off",
+            "id": "_R_2ql32d9l7aqll6_",
+            "type": "text",
+            "aria-autocomplete": "list",
+            "aria-expanded": "false",
+            "role": "combobox"
+          },
+          "rect": {
+            "x": 608,
+            "y": 770,
+            "width": 226,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520199475
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "#_R_2ql32d9l7aqll6_",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[2]/*[3]/*[1]/*[1]/*[12]/*[2]/*[2]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "combobox",
+          "accessibleName": "Movie",
+          "attrs": {
+            "id": "_R_2ql32d9l7aqll6_",
+            "type": "text",
+            "role": "combobox"
+          },
+          "stableHash": "7e0b7a7de45c86757fd337e1ecebc6d375930143",
+          "nodePath": [
+            1,
+            1,
+            1,
+            2,
+            0,
+            0,
+            11,
+            1,
+            1,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #_R_2ql32d9l7aqll6_ role=combobox name=\"Movie\"",
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s2",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "aria-invalid": "false",
+            "autocomplete": "off",
+            "id": "_R_2ql32d9l7aqll6_",
+            "type": "text",
+            "aria-autocomplete": "list",
+            "aria-expanded": "false",
+            "role": "combobox"
+          },
+          "rect": {
+            "x": 608,
+            "y": 770,
+            "width": 226,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520199602
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "#_R_2ql32d9l7aqll6_",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[2]/*[3]/*[1]/*[1]/*[12]/*[2]/*[2]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "combobox",
+          "accessibleName": "Movie",
+          "attrs": {
+            "id": "_R_2ql32d9l7aqll6_",
+            "type": "text",
+            "role": "combobox"
+          },
+          "stableHash": "7e0b7a7de45c86757fd337e1ecebc6d375930143",
+          "nodePath": [
+            1,
+            1,
+            1,
+            2,
+            0,
+            0,
+            11,
+            1,
+            1,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #_R_2ql32d9l7aqll6_ role=combobox name=\"Movie\"",
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "value": "The Godfather",
+      "clear": true
+    },
+    {
+      "id": "s3",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "li",
+          "attributes": {
+            "role": "option",
+            "id": "_R_2ql32d9l7aqll6_-option-0",
+            "data-option-index": "0",
+            "aria-disabled": "false",
+            "aria-selected": "false"
+          },
+          "text": "The Godfather",
+          "rect": {
+            "x": 599,
+            "y": 681,
+            "width": 300,
+            "height": 36
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520198835
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "option"
+            },
+            "score": 46,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "The Godfather",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#_R_2ql32d9l7aqll6_-option-0",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[2]/*[3]/*[1]/*[1]/*[12]/*[2]/*[3]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "li",
+          "role": "option",
+          "attrs": {
+            "role": "option",
+            "id": "_R_2ql32d9l7aqll6_-option-0",
+            "data-option-index": "0"
+          },
+          "stableHash": "ec54c8e196c43a662450248a03323e6eda820c50",
+          "nodePath": [
+            1,
+            1,
+            1,
+            2,
+            0,
+            0,
+            11,
+            1,
+            2,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "li #_R_2ql32d9l7aqll6_-option-0 role=option text=\"The Godfather\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "The Godfather: Part II"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

@@ -7,6 +7,7 @@
 import type { ElementRef } from '@rr/schema'
 import type { Locator } from 'playwright'
 
+import { candidateLocator } from './candidates.js'
 import { ElementNotFoundError } from './errors.js'
 import { resolveL2 } from './fingerprint.js'
 import { enterFrameScope } from './frames.js'
@@ -37,6 +38,7 @@ interface NormalizedOptions {
 	allowAi: boolean
 	ambiguityThreshold: number
 	maxFingerprintMatches: number
+	elementWaitMs: number
 	baseUrl?: string
 	levels: ResolveLevel[]
 }
@@ -47,6 +49,7 @@ function withDefaults(options?: ResolveOptions): NormalizedOptions {
 		allowAi: options?.allowAi ?? true,
 		ambiguityThreshold: options?.ambiguityThreshold ?? 0.15,
 		maxFingerprintMatches: options?.maxFingerprintMatches ?? 80,
+		elementWaitMs: options?.elementWaitMs ?? 5000,
 		baseUrl: options?.baseUrl,
 		levels: options?.levels ?? DEFAULT_LEVELS,
 	}
@@ -102,6 +105,34 @@ async function validateAiLocator(
 	}
 }
 
+async function waitForLoadState(scope: Scope, timeoutMs: number): Promise<void> {
+	// 已加载完会立即返回；页面正在导航时最多等 timeoutMs（不抛错，交给后面的候选等待兜底）
+	await scope
+		.waitForLoadState('domcontentloaded', { timeout: Math.min(timeoutMs, 10_000) })
+		.catch(() => undefined)
+}
+
+/** 轮询候选是否至少出现一个（count>0），用于吸收 SPA 首屏/异步渲染的空窗 */
+async function waitForAnyCandidate(
+	scope: Scope,
+	target: ElementRef,
+	timeoutMs: number,
+	log: (msg: string) => void,
+): Promise<void> {
+	const deadline = Date.now() + Math.max(0, timeoutMs)
+	if (timeoutMs <= 0) return
+	while (Date.now() < deadline) {
+		for (const candidate of sortCandidates(target.candidates)) {
+			const n = await candidateLocator(scope, candidate)
+				.count()
+				.catch(() => 0)
+			if (n > 0) return
+		}
+		await new Promise((resolve) => setTimeout(resolve, 150))
+	}
+	log(`等待元素出现超时（${timeoutMs}ms）：所有候选 count=0`)
+}
+
 export async function resolve(target: ElementRef, ctx: ResolveContext): Promise<ResolveResult> {
 	const opts = withDefaults(ctx.options)
 	const log = ctx.log ?? (() => {})
@@ -132,6 +163,10 @@ export async function resolve(target: ElementRef, ctx: ResolveContext): Promise<
 			})
 		}
 	}
+
+	// SPA/异步渲染：先等页面就绪 + 至少一个候选出现（真实站点上的关键健壮性差异）
+	await waitForLoadState(scope, opts.elementWaitMs)
+	await waitForAnyCandidate(scope, target, opts.elementWaitMs, log)
 
 	const failures: string[] = []
 	let sawAmbiguous = false

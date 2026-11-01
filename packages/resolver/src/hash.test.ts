@@ -51,7 +51,11 @@ describe('resolver: 指纹属性策略（与 recorder/pickFingerprintAttrs 一�
 		expect(isDynamicValue('field-1234')).toBe(true)
 		expect(isDynamicValue('submit-basic')).toBe(false)
 		expect(
-			stableAttrsOf({ id: 'field-123456', name: 'fullName', 'data-x': 'uuid-9f8e7d6c-1111-2222-3333-444455556666' }),
+			stableAttrsOf({
+				id: 'field-123456',
+				name: 'fullName',
+				'data-x': 'uuid-9f8e7d6c-1111-2222-3333-444455556666',
+			}),
 		).toEqual({ name: 'fullName' })
 	})
 
@@ -78,9 +82,9 @@ describe('resolver: stableHash（与 recorder 同算法）', () => {
 	})
 
 	it('payload 与 recorder 完全一致（\\u0000 分隔 + 属性字典序 + nodePath 末位）', () => {
-		expect(
-			canonicalHashInput({ tag: 'a', attrs: { id: 'q', name: 'n' }, nodePath: [1, 2] }),
-		).toBe(['a', '', '', 'id=q&name=n', '1.2'].join('\u0000'))
+		expect(canonicalHashInput({ tag: 'a', attrs: { id: 'q', name: 'n' }, nodePath: [1, 2] })).toBe(
+			['a', '', '', 'id=q&name=n', '1.2'].join('\u0000'),
+		)
 		expect(canonicalHashInput({ tag: 'a', attrs: {} })).toBe(['a', '', '', '', ''].join('\u0000'))
 	})
 
@@ -98,7 +102,12 @@ describe('resolver: stableHash（与 recorder 同算法）', () => {
 	})
 
 	it('nodePath 参与 hash：两个一模一样的按钮可以区分', () => {
-		const base = { tag: 'button', role: 'button', accessibleName: '提交', attrs: { type: 'button' } }
+		const base = {
+			tag: 'button',
+			role: 'button',
+			accessibleName: '提交',
+			attrs: { type: 'button' },
+		}
 		const first = computeStableHash({ ...base, nodePath: [1, 2, 0] })
 		const second = computeStableHash({ ...base, nodePath: [1, 2, 1] })
 		expect(first).not.toBe(second)

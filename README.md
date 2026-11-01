@@ -38,7 +38,7 @@ docs/          架构契约（architecture.md）、spike 结论
 
 - [docs/architecture.md](docs/architecture.md) —— 各包接口契约（并行开发以它为准）
 - [docs/spikes.md](docs/spikes.md) —— closed shadow / iframe ref 的实测结论
-- [../产品设计-录制回放-v0.1.md](../产品设计-录制回放-v0.1.md) —— 产品设计
+- [../docs/产品设计-录制回放-v0.1.md](../docs/产品设计-录制回放-v0.1.md) —— 产品设计
 - [../refs/README.md](../refs/README.md) —— 14 个参考仓库索引
 
 ## 状态（M0 + M1 已完成）
@@ -78,6 +78,14 @@ P50 93ms / P95 354ms
 > 真实站点测试顺带抓到一个**只在 tsx 运行时才暴露的 bug**：esbuild `keepNames` 会在函数体里注入
 > `__name(...)`，函数被 `page.evaluate` 序列化进页面后抛 `__name is not defined`，导致 L2 全挂。
 > 已在 resolver/executor/recorder 三处注入页面级垫片修复（`NAME_KEEPALIVE_SOURCE`）。
+
+## 公网复杂站点语料库（10 站）
+
+见 [docs/public-corpus.md](docs/public-corpus.md)：**6/10 站点全绿、20/30 runs 通过（66.7%）**，51 步链路覆盖电商/企业后台/表单/动态列表/搜索/组件库/文档站。
+
+```bash
+npx tsx scripts/public-corpus.ts run --runs 3
+```
 
 ## 下一步（M2）
 

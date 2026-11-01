@@ -1,0 +1,414 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjmu0v_gbmciu",
+  "title": "/selenium/web/web-form.html",
+  "version": 1,
+  "createdAt": "2026-11-01T08:03:46.613Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://www.selenium.dev/selenium/web/web-form.html",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [
+    {
+      "name": "password",
+      "type": "secret",
+      "secret": true,
+      "source": "input"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "type": "text",
+            "name": "my-text",
+            "id": "my-text-id"
+          },
+          "rect": {
+            "x": 72,
+            "y": 88,
+            "width": 416,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520225079
+        },
+        "candidates": [
+          {
+            "kind": "label",
+            "value": "Text input",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#my-text-id",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"my-text\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[1]/*[2]/*[1]/*[1]/*[1]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "my-text",
+            "id": "my-text-id"
+          },
+          "stableHash": "8edb0a9d45e95046c023bfe8890e28ca38440150",
+          "nodePath": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #my-text-id（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Text input"
+        ]
+      },
+      "value": "hello rr",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "type": "password",
+            "name": "my-password",
+            "autocomplete": "off"
+          },
+          "rect": {
+            "x": 72,
+            "y": 158,
+            "width": 416,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520225100
+        },
+        "candidates": [
+          {
+            "kind": "label",
+            "value": "Password",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"my-password\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "type": "password",
+            "name": "my-password"
+          },
+          "stableHash": "ba328564776d4e1749b3adfab38c03062e43877d",
+          "nodePath": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Password"
+        ]
+      },
+      "value": "{{password}}",
+      "clear": true
+    },
+    {
+      "id": "s3",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "textarea",
+          "attributes": {
+            "name": "my-textarea"
+          },
+          "rect": {
+            "x": 72,
+            "y": 228,
+            "width": 416,
+            "height": 86
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520225104
+        },
+        "candidates": [
+          {
+            "kind": "label",
+            "value": "Textarea",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "textarea[name=\"my-textarea\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[1]/*[2]/*[1]/*[1]/*[3]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "textarea",
+          "attrs": {
+            "name": "my-textarea"
+          },
+          "stableHash": "d7a27c6cb760bf3426b63ae65196ae341ae1c22c",
+          "nodePath": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            2,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "textarea（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Textarea"
+        ]
+      },
+      "value": "multi-step record and replay",
+      "clear": true
+    },
+    {
+      "id": "s4",
+      "kind": "select",
+      "target": {
+        "observed": {
+          "tag": "select",
+          "attributes": {
+            "name": "my-select"
+          },
+          "text": "Two",
+          "rect": {
+            "x": 512,
+            "y": 88,
+            "width": 416,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520225107
+        },
+        "candidates": [
+          {
+            "kind": "label",
+            "value": "Dropdown (select) Open this select menu One Two Three",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "select[name=\"my-select\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[1]/*[2]/*[1]/*[2]/*[1]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "select",
+          "attrs": {
+            "name": "my-select"
+          },
+          "stableHash": "1d79d84114a38baa483c8b37a5f438dc76ba4576",
+          "nodePath": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "select text=\"Two\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Dropdown (select)"
+        ]
+      },
+      "value": "2"
+    },
+    {
+      "id": "s5",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://www.selenium.dev/selenium/web/submitted-form.html?*"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "submit"
+          },
+          "text": "Submit",
+          "rect": {
+            "x": 512,
+            "y": 392,
+            "width": 77.17,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520225435
+        },
+        "candidates": [
+          {
+            "kind": "text",
+            "value": "Submit",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[1]/*[2]/*[1]/*[2]/*[7]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "attrs": {
+            "type": "submit"
+          },
+          "stableHash": "b5dabdcb9618f11227dc6fb42bf436ab7f2829a0",
+          "nodePath": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            6
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button text=\"Submit\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Default radio"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

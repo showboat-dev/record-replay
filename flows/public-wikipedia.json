@@ -1,0 +1,350 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjyl06_xthkxi",
+  "title": "/wiki/Main_Page",
+  "version": 1,
+  "createdAt": "2026-11-01T08:12:55.513Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://en.wikipedia.org/wiki/Main_Page",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "autocomplete": "off",
+            "type": "search",
+            "name": "search",
+            "placeholder": "Search Wikipedia",
+            "aria-label": "Search Wikipedia",
+            "title": "Search Wikipedia [ctrl-option-f]",
+            "id": "searchInput"
+          },
+          "rect": {
+            "x": 266,
+            "y": 17,
+            "width": 404.3,
+            "height": 32
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520773620
+        },
+        "candidates": [
+          {
+            "kind": "label",
+            "value": "Search Wikipedia",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#searchInput",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"search\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"Search Wikipedia\"]",
+            "score": 155,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "type": "search",
+            "name": "search",
+            "placeholder": "Search Wikipedia",
+            "aria-label": "Search Wikipedia",
+            "title": "Search Wikipedia [ctrl-option-f]",
+            "id": "searchInput"
+          },
+          "stableHash": "04b5a69f80692f233a080ec772641350b2477707",
+          "nodePath": [
+            1,
+            2,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #searchInput（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "Playwright (software)",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "key",
+      "key": "Enter",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "autocomplete": "off",
+            "type": "search",
+            "name": "search",
+            "placeholder": "Search Wikipedia",
+            "aria-label": "Search Wikipedia",
+            "title": "Search Wikipedia [ctrl-option-f]",
+            "id": "searchInput"
+          },
+          "rect": {
+            "x": 266,
+            "y": 17,
+            "width": 404.3,
+            "height": 32
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520773624
+        },
+        "candidates": [
+          {
+            "kind": "label",
+            "value": "Search Wikipedia",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#searchInput",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"search\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"Search Wikipedia\"]",
+            "score": 155,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "type": "search",
+            "name": "search",
+            "placeholder": "Search Wikipedia",
+            "aria-label": "Search Wikipedia",
+            "title": "Search Wikipedia [ctrl-option-f]",
+            "id": "searchInput"
+          },
+          "stableHash": "04b5a69f80692f233a080ec772641350b2477707",
+          "nodePath": [
+            1,
+            2,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #searchInput（元素在录制后被销毁，候选未经校验）"
+      }
+    },
+    {
+      "id": "s3",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://en.wikipedia.org/wiki/Microsoft"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {},
+          "text": "Search",
+          "rect": {
+            "x": 669.3,
+            "y": 17,
+            "width": 70.7,
+            "height": 32
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520773625
+        },
+        "candidates": [
+          {
+            "kind": "text",
+            "value": "Search",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[1]/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "attrs": {},
+          "stableHash": "ca1e0909732def3e734c14caa9f6bf838715652d",
+          "nodePath": [
+            1,
+            2,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button text=\"Search\"（元素在录制后被销毁，候选未经校验）"
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s4",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://en.wikipedia.org/wiki/Microsoft"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "href": "https://en.wikipedia.org/wiki/Microsoft",
+            "title": ""
+          },
+          "text": "Microsoft",
+          "rect": {
+            "x": 998,
+            "y": 308.36,
+            "width": 57.13,
+            "height": 16
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520774535
+        },
+        "candidates": [
+          {
+            "kind": "text",
+            "value": "Microsoft",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[4]/*[1]/*[3]/*[1]/*[4]/*[2]/*[1]/*[1]/*[4]/*[1]/*[3]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "attrs": {},
+          "stableHash": "6f1861cce4a6d687087b9d5e7aa98d8502fd43e0",
+          "nodePath": [
+            1,
+            3,
+            0,
+            2,
+            0,
+            3,
+            1,
+            0,
+            0,
+            3,
+            0,
+            2,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a text=\"Microsoft\"（元素在录制后被销毁，候选未经校验）"
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

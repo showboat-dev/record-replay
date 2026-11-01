@@ -1,0 +1,406 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjynaj_c8orno",
+  "title": "/web/index.php/auth/login",
+  "version": 1,
+  "createdAt": "2026-11-01T08:13:06.141Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://opensource-demo.orangehrmlive.com/web/index.php/auth/login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [
+    {
+      "name": "password",
+      "type": "secret",
+      "secret": true,
+      "source": "input"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "data-v-1f99f73c": "",
+            "name": "username",
+            "placeholder": "Username"
+          },
+          "rect": {
+            "x": 333.5,
+            "y": 441.5,
+            "width": 485,
+            "height": 45
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520779616
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "input[name=\"username\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"Username\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[1]/*[1]/*[1]/*[1]/*[2]/*[3]/*[2]/*[2]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "name": "username",
+            "placeholder": "Username"
+          },
+          "stableHash": "7c0c0d822d24529e5790c160811c8e6a94befa1a",
+          "nodePath": [
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            1,
+            1,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "Admin",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "data-v-1f99f73c": "",
+            "type": "password",
+            "name": "password",
+            "placeholder": "Password"
+          },
+          "rect": {
+            "x": 333.5,
+            "y": 528.89,
+            "width": 485,
+            "height": 45
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520779637
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "input[name=\"password\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"Password\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[1]/*[1]/*[1]/*[1]/*[2]/*[3]/*[2]/*[3]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "type": "password",
+            "name": "password",
+            "placeholder": "Password"
+          },
+          "stableHash": "cbcfb994b84711513a2cef53ca76beafc390e60f",
+          "nodePath": [
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            1,
+            2,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "{{password}}",
+      "clear": true
+    },
+    {
+      "id": "s3",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://opensource-demo.orangehrmlive.com/web/index.php/dashboard/index"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "data-v-10d463b7": "",
+            "data-v-0af708be": "",
+            "type": "submit"
+          },
+          "text": "Login",
+          "rect": {
+            "x": 333.5,
+            "y": 605.89,
+            "width": 485,
+            "height": 46
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520779661
+        },
+        "candidates": [
+          {
+            "kind": "text",
+            "value": "Login",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[1]/*[1]/*[1]/*[1]/*[2]/*[3]/*[2]/*[4]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "attrs": {
+            "type": "submit"
+          },
+          "stableHash": "5942e531ca1fe229730badfb5b713f27157ef579",
+          "nodePath": [
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2,
+            1,
+            3,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button text=\"Login\"（元素在录制后被销毁，候选未经校验）"
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s4",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "data-v-6475d26d": "",
+            "href": "/web/index.php/pim/viewMyDetails"
+          },
+          "text": "My Info",
+          "rect": {
+            "x": 0,
+            "y": 348.39,
+            "width": 246,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520782136
+        },
+        "candidates": [
+          {
+            "kind": "text",
+            "value": "My Info",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[1]/*[1]/*[1]/*[1]/*[2]/*[2]/*[6]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "attrs": {},
+          "stableHash": "10dac36af39531662a55304c4ff05fc4494fc516",
+          "nodePath": [
+            1,
+            2,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            5,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a text=\"My Info\"（元素在录制后被销毁，候选未经校验）"
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s5",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "data-v-84c8a174": "",
+            "href": "/web/index.php/pim/contactDetails/empNumber/7"
+          },
+          "text": "Contact Details",
+          "rect": {
+            "x": 320,
+            "y": 369.38,
+            "width": 188,
+            "height": 35
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520784236
+        },
+        "candidates": [
+          {
+            "kind": "text",
+            "value": "Contact Details",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[1]/*[2]/*[2]/*[1]/*[1]/*[1]/*[1]/*[2]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "attrs": {},
+          "stableHash": "426aa60b8d430d9184797896b5681024d02d3355",
+          "nodePath": [
+            1,
+            2,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a text=\"Contact Details\"（元素在录制后被销毁，候选未经校验）"
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

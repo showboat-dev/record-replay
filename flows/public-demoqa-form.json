@@ -1,0 +1,967 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjk9yk_39el0t",
+  "title": "/automation-practice-form",
+  "version": 1,
+  "createdAt": "2026-11-01T08:01:50.147Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://demoqa.com/automation-practice-form",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "autocomplete": "off",
+            "placeholder": "First Name",
+            "id": "firstName",
+            "type": "text"
+          },
+          "rect": {
+            "x": 467.39,
+            "y": 255,
+            "width": 250.39,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520109281
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "First Name",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "First Name",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#firstName",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"First Name\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[1]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "First Name",
+          "attrs": {
+            "placeholder": "First Name",
+            "id": "firstName",
+            "type": "text"
+          },
+          "stableHash": "e1a25d455d6df518b81e9ad58073f3a428343972",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #firstName role=textbox name=\"First Name\"",
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "value": "Alice",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "autocomplete": "off",
+            "placeholder": "Last Name",
+            "id": "lastName",
+            "type": "text"
+          },
+          "rect": {
+            "x": 810.38,
+            "y": 255,
+            "width": 250.39,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520109399
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "Last Name",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "Last Name",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#lastName",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"Last Name\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[1]/*[4]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "Last Name",
+          "attrs": {
+            "placeholder": "Last Name",
+            "id": "lastName",
+            "type": "text"
+          },
+          "stableHash": "caf0a4f73788c770d427777d28720850a0d9d614",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            0,
+            3,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #lastName role=textbox name=\"Last Name\"",
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "value": "Demo",
+      "clear": true
+    },
+    {
+      "id": "s3",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "autocomplete": "off",
+            "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+            "placeholder": "name@example.com",
+            "id": "userEmail",
+            "type": "text"
+          },
+          "rect": {
+            "x": 467.39,
+            "y": 301,
+            "width": 593.39,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520109515
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "name@example.com",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "name@example.com",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#userEmail",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"name@example.com\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[2]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "name@example.com",
+          "attrs": {
+            "placeholder": "name@example.com",
+            "id": "userEmail",
+            "type": "text"
+          },
+          "stableHash": "0c1f89776695ca2cf825a2303c3e54d1b9391da3",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            1,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #userEmail role=textbox name=\"name@example.com\"",
+        "crop": {
+          "ref": "record/elements/2.png",
+          "dpr": 1
+        }
+      },
+      "value": "alice@example.com",
+      "clear": true
+    },
+    {
+      "id": "s4",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "gender-radio-2",
+            "type": "radio",
+            "name": "gender"
+          },
+          "rect": {
+            "x": 542.14,
+            "y": 351,
+            "width": 16,
+            "height": 16
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520109631
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "radio",
+              "name": "Female",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "radio",
+              "name": "Female",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "Female",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#gender-radio-2",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[3]/*[2]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "radio",
+          "accessibleName": "Female",
+          "attrs": {
+            "id": "gender-radio-2",
+            "type": "radio",
+            "name": "gender"
+          },
+          "stableHash": "3726e6b8652cb53a99c75fb04688d22494920a12",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            2,
+            1,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #gender-radio-2 role=radio name=\"Female\"",
+        "nearbyText": [
+          "Female"
+        ],
+        "crop": {
+          "ref": "record/elements/3.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s5",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "autocomplete": "off",
+            "pattern": "\\d*",
+            "maxlength": "10",
+            "placeholder": "Mobile Number",
+            "id": "userNumber",
+            "type": "text"
+          },
+          "rect": {
+            "x": 467.39,
+            "y": 381,
+            "width": 593.39,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520109748
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "Mobile Number",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "Mobile Number",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#userNumber",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"Mobile Number\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[4]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "Mobile Number",
+          "attrs": {
+            "placeholder": "Mobile Number",
+            "id": "userNumber",
+            "type": "text"
+          },
+          "stableHash": "5113501092ae84ef13245bdc3a377ff17b52c37d",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            3,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #userNumber role=textbox name=\"Mobile Number\"",
+        "crop": {
+          "ref": "record/elements/4.png",
+          "dpr": 1
+        }
+      },
+      "value": "1380013800",
+      "clear": true
+    },
+    {
+      "id": "s6",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "id": "dateOfBirthInput",
+            "type": "text"
+          },
+          "rect": {
+            "x": 467.39,
+            "y": 427,
+            "width": 225,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520109848
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "#dateOfBirthInput",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[5]/*[2]/*[1]/*[1]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "attrs": {
+            "id": "dateOfBirthInput",
+            "type": "text"
+          },
+          "stableHash": "250ba9a31d7b0a05cf9429d5f358f352248401dc",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            4,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #dateOfBirthInput role=textbox",
+        "crop": {
+          "ref": "record/elements/5.png",
+          "dpr": 1
+        }
+      },
+      "value": "01 Jan 1990",
+      "clear": true
+    },
+    {
+      "id": "s7",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "a",
+            "attributes": {
+              "href": "https://demoqa.com"
+            },
+            "rect": {
+              "x": 546.5,
+              "y": 0,
+              "width": 347,
+              "height": 100
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793520110033
+          },
+          "candidates": [
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[1]/*[1]/*[1]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "a",
+            "role": "link",
+            "attrs": {},
+            "stableHash": "b9c2e74abf4815c82030b89eaeea9dfadbeae40e",
+            "nodePath": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "a role=link"
+        }
+      },
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "textarea",
+          "attributes": {
+            "placeholder": "Current Address",
+            "id": "currentAddress"
+          },
+          "rect": {
+            "x": 467.39,
+            "y": 604,
+            "width": 593.39,
+            "height": 134
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520109950
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "Current Address",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "Current Address",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#currentAddress",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "textarea[placeholder=\"Current Address\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[9]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "textarea",
+          "role": "textbox",
+          "accessibleName": "Current Address",
+          "attrs": {
+            "placeholder": "Current Address",
+            "id": "currentAddress"
+          },
+          "stableHash": "e578390e21a4cdf2fed6b557a5b16d26d607703b",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            8,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "textarea #currentAddress role=textbox name=\"Current Address\"",
+        "crop": {
+          "ref": "record/elements/6.png",
+          "dpr": 1
+        }
+      },
+      "value": "Shanghai",
+      "clear": true
+    },
+    {
+      "id": "s8",
+      "expect": {
+        "kind": "elementVisible",
+        "target": {
+          "observed": {
+            "tag": "div",
+            "attributes": {
+              "role": "dialog",
+              "aria-modal": "true",
+              "aria-labelledby": "example-modal-sizes-title-lg"
+            },
+            "text": "Thanks for submitting the formLabelValuesStudent NameAlice DemoStudent Emailalice@example.comGenderFemaleMobile1380013800Date of Birth01 January,1990SubjectsHobbiesPictureAddressShanghaiState and City",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 1440,
+              "height": 900
+            },
+            "scroll": {
+              "x": 0,
+              "y": 0
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "dpr": 1,
+            "recordedAt": 1793520110133
+          },
+          "candidates": [
+            {
+              "kind": "role",
+              "value": {
+                "role": "dialog",
+                "name": "Thanks for submitting the form",
+                "exact": true
+              },
+              "score": 30,
+              "source": "record"
+            },
+            {
+              "kind": "role",
+              "value": {
+                "role": "dialog",
+                "name": "Thanks for submitting the form",
+                "exact": false
+              },
+              "score": 36,
+              "source": "record"
+            },
+            {
+              "kind": "label",
+              "value": "Thanks for submitting the form",
+              "score": 50,
+              "source": "record"
+            },
+            {
+              "kind": "xpath",
+              "value": "/html/*[2]/*[3]",
+              "score": 900,
+              "source": "record"
+            }
+          ],
+          "fingerprint": {
+            "tag": "div",
+            "role": "dialog",
+            "accessibleName": "Thanks for submitting the form",
+            "attrs": {
+              "role": "dialog",
+              "aria-labelledby": "example-modal-sizes-title-lg"
+            },
+            "stableHash": "c1d232fae31c6ec921cf9dec034146d4aba7924b",
+            "nodePath": [
+              1,
+              2
+            ]
+          },
+          "frame": {
+            "path": []
+          },
+          "description": "div role=dialog name=\"Thanks for submitting the form\""
+        }
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "type": "submit",
+            "id": "submit"
+          },
+          "text": "Submit",
+          "rect": {
+            "x": 947.59,
+            "y": 808,
+            "width": 77.17,
+            "height": 38
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520110065
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "Submit",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button",
+              "name": "Submit",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#submit",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[1]/*[2]/*[1]/*[1]/*[2]/*[1]/*[3]/*[11]/*[1]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "role": "button",
+          "accessibleName": "Submit",
+          "attrs": {
+            "type": "submit",
+            "id": "submit"
+          },
+          "stableHash": "b735161c1944df29ada3765e681872aa1d87b218",
+          "nodePath": [
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            0,
+            2,
+            10,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #submit role=button name=\"Submit\"",
+        "crop": {
+          "ref": "record/elements/7.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

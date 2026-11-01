@@ -37,8 +37,8 @@ describe('resolver: frame urlPattern 跨环境匹配', () => {
 	})
 
 	it('相对 path 的 pattern 也能匹配', () => {
-		expect(matchesUrlPattern('http://x.test:1/inner-form?a=1', '/inner-*', undefined, wildcardToRegExp)).toBe(
-			true,
-		)
+		expect(
+			matchesUrlPattern('http://x.test:1/inner-form?a=1', '/inner-*', undefined, wildcardToRegExp),
+		).toBe(true)
 	})
 })

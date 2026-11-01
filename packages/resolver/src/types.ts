@@ -21,6 +21,8 @@ export interface ResolveOptions {
 	ambiguityThreshold?: number
 	/** L2 页面内最多收集多少个指纹候选项，默认 80 */
 	maxFingerprintMatches?: number
+	/** 解析前等待元素出现的最长时间（SPA 首屏/异步渲染），默认 5000ms */
+	elementWaitMs?: number
 	/**
 	 * 回放环境 origin 覆盖。用于 iframe `urlPattern` 段的重定基：
 	 * 录制时 frame.url 带 5199，回放在 5173，不重定基就永远匹配不上。

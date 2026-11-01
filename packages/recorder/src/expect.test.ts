@@ -79,7 +79,9 @@ describe('inferExpect', () => {
 
 	it('新元素没有 ref（未挑中）→ 不出 expect', () => {
 		const before = signature('http://x/a', [])
-		const after = signature('http://x/a', [node({ key: '0:p#0|新文本', role: 'status', text: '新文本' })])
+		const after = signature('http://x/a', [
+			node({ key: '0:p#0|新文本', role: 'status', text: '新文本' }),
+		])
 		expect(inferExpect(before, after)).toBeUndefined()
 	})
 
@@ -102,18 +104,56 @@ describe('appearedNodes', () => {
 describe('pickExpectTarget', () => {
 	it('优先 role=status/alert 的节点', () => {
 		const picked = pickExpectTarget([
-			node({ key: 'a', tag: 'div', role: undefined, text: 'x', rect: { x: 0, y: 0, width: 10, height: 10 } }),
+			node({
+				key: 'a',
+				tag: 'div',
+				role: undefined,
+				text: 'x',
+				rect: { x: 0, y: 0, width: 10, height: 10 },
+			}),
 			node({ key: 'b', role: 'alert', text: 'y', rect: { x: 0, y: 0, width: 500, height: 300 } }),
 		])
 		expect(picked?.key).toBe('b')
 	})
 
 	it('同等条件下挑面积小的（更像「具体反馈」而不是整块容器）', () => {
+		// 白名单（dialog/h1-h6/output 或 alert/status/dialog/alertdialog）之外的节点不参与推断
 		const picked = pickExpectTarget([
-			node({ key: 'big', text: 'ok', rect: { x: 0, y: 0, width: 1200, height: 800 } }),
-			node({ key: 'small', text: 'ok', rect: { x: 0, y: 0, width: 120, height: 40 } }),
+			node({
+				key: 'big',
+				tag: 'output',
+				role: 'status',
+				text: 'ok',
+				rect: { x: 0, y: 0, width: 1200, height: 800 },
+			}),
+			node({
+				key: 'small',
+				tag: 'output',
+				role: 'status',
+				text: 'ok',
+				rect: { x: 0, y: 0, width: 120, height: 40 },
+			}),
 		])
 		expect(picked?.key).toBe('small')
+	})
+
+	it('列表项 / 链接 / 按钮不参与推断（真实站点 flaky 的主要来源）', () => {
+		const picked = pickExpectTarget([
+			node({
+				key: 'li',
+				tag: 'li',
+				text: 'todo item',
+				rect: { x: 0, y: 0, width: 200, height: 40 },
+			}),
+			node({ key: 'link', tag: 'a', text: 'Active', rect: { x: 0, y: 0, width: 80, height: 20 } }),
+			node({
+				key: 'btn',
+				tag: 'button',
+				text: 'Submit',
+				rect: { x: 0, y: 0, width: 100, height: 30 },
+			}),
+		])
+		expect(picked).toBeUndefined()
 	})
 
 	it('空列表 → undefined', () => {

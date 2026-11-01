@@ -1,0 +1,821 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxkc2j8_5b4q7x",
+  "title": "/todomvc/",
+  "version": 1,
+  "createdAt": "2026-11-01T08:23:25.035Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://demo.playwright.dev/todomvc/#/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "What needs to be done?"
+          },
+          "rect": {
+            "x": 445,
+            "y": 174.59,
+            "width": 550,
+            "height": 65.59
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404210
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"What needs to be done?\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "What needs to be done?",
+          "attrs": {
+            "placeholder": "What needs to be done?"
+          },
+          "stableHash": "60308f55fbc2aa968da153081848b06fad729800",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input role=textbox name=\"What needs to be done?\"",
+        "nearbyText": [
+          "todos"
+        ],
+        "crop": {
+          "ref": "record/elements/0.png",
+          "dpr": 1
+        }
+      },
+      "value": "record flow",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "key",
+      "key": "Enter",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "What needs to be done?"
+          },
+          "rect": {
+            "x": 445,
+            "y": 174.59,
+            "width": 550,
+            "height": 65.59
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404320
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"What needs to be done?\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "What needs to be done?",
+          "attrs": {
+            "placeholder": "What needs to be done?"
+          },
+          "stableHash": "60308f55fbc2aa968da153081848b06fad729800",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input role=textbox name=\"What needs to be done?\"",
+        "nearbyText": [
+          "todos"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      }
+    },
+    {
+      "id": "s3",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "What needs to be done?"
+          },
+          "rect": {
+            "x": 445,
+            "y": 174.59,
+            "width": 550,
+            "height": 65.59
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404419
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"What needs to be done?\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "What needs to be done?",
+          "attrs": {
+            "placeholder": "What needs to be done?"
+          },
+          "stableHash": "60308f55fbc2aa968da153081848b06fad729800",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input role=textbox name=\"What needs to be done?\"",
+        "nearbyText": [
+          "todos"
+        ],
+        "crop": {
+          "ref": "record/elements/2.png",
+          "dpr": 1
+        }
+      },
+      "value": "replay flow",
+      "clear": true
+    },
+    {
+      "id": "s4",
+      "kind": "key",
+      "key": "Enter",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "What needs to be done?"
+          },
+          "rect": {
+            "x": 445,
+            "y": 174.59,
+            "width": 550,
+            "height": 65.59
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404521
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"What needs to be done?\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "What needs to be done?",
+          "attrs": {
+            "placeholder": "What needs to be done?"
+          },
+          "stableHash": "60308f55fbc2aa968da153081848b06fad729800",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input role=textbox name=\"What needs to be done?\"",
+        "nearbyText": [
+          "todos"
+        ],
+        "crop": {
+          "ref": "record/elements/3.png",
+          "dpr": 1
+        }
+      }
+    },
+    {
+      "id": "s5",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "What needs to be done?"
+          },
+          "rect": {
+            "x": 445,
+            "y": 174.59,
+            "width": 550,
+            "height": 65.59
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404635
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"What needs to be done?\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "What needs to be done?",
+          "attrs": {
+            "placeholder": "What needs to be done?"
+          },
+          "stableHash": "60308f55fbc2aa968da153081848b06fad729800",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input role=textbox name=\"What needs to be done?\"",
+        "nearbyText": [
+          "todos"
+        ],
+        "crop": {
+          "ref": "record/elements/4.png",
+          "dpr": 1
+        }
+      },
+      "value": "verify flow",
+      "clear": true
+    },
+    {
+      "id": "s6",
+      "kind": "key",
+      "key": "Enter",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "What needs to be done?"
+          },
+          "rect": {
+            "x": 445,
+            "y": 174.59,
+            "width": 550,
+            "height": 65.59
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404737
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "textbox",
+              "name": "What needs to be done?",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[placeholder=\"What needs to be done?\"]",
+            "score": 155,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "role": "textbox",
+          "accessibleName": "What needs to be done?",
+          "attrs": {
+            "placeholder": "What needs to be done?"
+          },
+          "stableHash": "60308f55fbc2aa968da153081848b06fad729800",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input role=textbox name=\"What needs to be done?\"",
+        "nearbyText": [
+          "todos"
+        ],
+        "crop": {
+          "ref": "record/elements/5.png",
+          "dpr": 1
+        }
+      }
+    },
+    {
+      "id": "s7",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "aria-label": "Toggle Todo",
+            "type": "checkbox"
+          },
+          "rect": {
+            "x": 445,
+            "y": 250.58,
+            "width": 40,
+            "height": 40
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521402936
+        },
+        "candidates": [
+          {
+            "kind": "label",
+            "value": "Toggle Todo",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[3]/*[1]/*[1]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "aria-label": "Toggle Todo",
+            "type": "checkbox"
+          },
+          "stableHash": "33a225a28966e9e381265d4fc3979f9d4aef9351",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            2,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "record flow"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s8",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://demo.playwright.dev/todomvc/"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "href": "#/active"
+          },
+          "text": "Active",
+          "rect": {
+            "x": 668.78,
+            "y": 307.98,
+            "width": 51.03,
+            "height": 25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404869
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "link",
+              "name": "Active",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "link",
+              "name": "Active",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "Active",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[3]/*[2]/*[2]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "role": "link",
+          "accessibleName": "Active",
+          "attrs": {},
+          "stableHash": "5becbfc38411bb9b65381b1ae247154c6c0b62d3",
+          "nodePath": [
+            1,
+            1,
+            0,
+            2,
+            1,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a role=link name=\"Active\"",
+        "crop": {
+          "ref": "record/elements/7.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s9",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://demo.playwright.dev/todomvc/"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "href": "#/completed"
+          },
+          "text": "Completed",
+          "rect": {
+            "x": 729.72,
+            "y": 307.98,
+            "width": 80.41,
+            "height": 25
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793521404971
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "link",
+              "name": "Completed",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "link",
+              "name": "Completed",
+              "exact": false
+            },
+            "score": 36,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[3]/*[2]/*[3]/*[1]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "role": "link",
+          "accessibleName": "Completed",
+          "attrs": {},
+          "stableHash": "23681ecea8bf07bc7fd81841c48804de0f7934f8",
+          "nodePath": [
+            1,
+            1,
+            0,
+            2,
+            1,
+            2,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a role=link name=\"Completed\"",
+        "crop": {
+          "ref": "record/elements/8.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjnkzx_8tpvlt",
+  "title": "playwright.dev",
+  "version": 1,
+  "createdAt": "2026-11-01T08:04:21.632Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://playwright.dev/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [],
+  "steps": [
+    {
+      "id": "s1",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://playwright.dev/docs/intro"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "href": "/docs/intro"
+          },
+          "text": "Docs",
+          "rect": {
+            "x": 155.3,
+            "y": 12.8,
+            "width": 61.8,
+            "height": 34.39
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520260284
+        },
+        "candidates": [
+          {
+            "kind": "text",
+            "value": "Docs",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[2]/*[1]/*[1]/*[3]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "attrs": {},
+          "stableHash": "2f579c7fe53aeb7f286a64af620b5a9ed41e861d",
+          "nodePath": [
+            1,
+            2,
+            1,
+            0,
+            0,
+            2
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a text=\"Docs\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Playwright",
+          "MCP"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s2",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://playwright.dev/docs/api/class-playwright"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "href": "/docs/api/class-playwright",
+            "aria-current": "page"
+          },
+          "text": "API",
+          "rect": {
+            "x": 324.7,
+            "y": 12.8,
+            "width": 49.08,
+            "height": 34.39
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793520261571
+        },
+        "candidates": [
+          {
+            "kind": "role",
+            "value": {
+              "role": "link",
+              "name": "API",
+              "exact": true
+            },
+            "score": 30,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[3]/*[2]/*[1]/*[1]/*[6]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "role": "link",
+          "accessibleName": "API",
+          "attrs": {},
+          "stableHash": "fe1217e6bd93314870cbd9dca243967c45a51251",
+          "nodePath": [
+            1,
+            2,
+            1,
+            0,
+            0,
+            5
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a role=link name=\"API\"",
+        "nearbyText": [
+          "CLI",
+          "Node.jsNode.jsPythonJava.NET"
+        ],
+        "crop": {
+          "ref": "record/elements/1.png",
+          "dpr": 1
+        }
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}
