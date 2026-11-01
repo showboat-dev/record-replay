@@ -13,7 +13,7 @@ ${pc.bold('rr')} — 网页操作录制回放引擎（record & replay）
 
 ${pc.bold('用法')}
   rr record  --url <url> --out flows/<id>.json [--viewport 1440x900] [--headless] [--keep-raw]
-  rr play    flows/<id>.json [--runs 3] [--headed] [--ai] [--write-back] [--artifacts ./artifacts] [--json]
+  rr play    flows/<id>.json [--runs 3] [--headed] [--ai] [--var k=v]... [--write-back] [--artifacts ./artifacts] [--json]
   rr inspect flows/<id>.json
   rr harness [--runs 10] [--sites local|all|public] [--out artifacts] [--ai] [--json]
 
@@ -37,7 +37,10 @@ function usageError(msg: string): never {
 /** parseArgs 的统一包装：未知参数/缺值也算用法错误（退出码 2），而不是冒到顶层的 1 */
 function parseCliOptions(
 	args: string[],
-	options: Record<string, { type: 'string' | 'boolean'; default?: string | boolean; short?: string }>,
+	options: Record<
+		string,
+		{ type: 'string' | 'boolean'; default?: string | boolean; short?: string; multiple?: boolean }
+	>,
 ): { values: CliValues; positionals: string[] } {
 	try {
 		const { values, positionals } = parseArgs({ args, allowPositionals: true, options })
@@ -239,11 +242,13 @@ async function playCmd(args: string[]): Promise<void> {
 		'write-back': { type: 'boolean', default: false },
 		artifacts: { type: 'string' },
 		json: { type: 'boolean', default: false },
+		var: { type: 'string', multiple: true },
 	})
 	const file = positionals[0]
 	if (!file) usageError('play 需要一个 flow 文件路径')
 	const runs = parseIntegerFlag(values['runs'], '--runs', 1)
 	const writeBack = Boolean(values['write-back'])
+	const variables = parseVariables(values['var'])
 
 	try {
 		const { playRuns } = (await import('@rr/executor')) as typeof import('@rr/executor')
@@ -263,6 +268,7 @@ async function playCmd(args: string[]): Promise<void> {
 			headless: !values['headed'],
 			runs,
 			ai,
+			...(variables ? { variables } : {}),
 			...(values['artifacts'] ? { artifactsRoot: values['artifacts'] as string } : {}),
 			...(writeBack ? { writeBack: true } : {}),
 			// 日志走 stderr，保证 --json 时 stdout 只有 JSON
@@ -332,6 +338,19 @@ async function harnessCmd(args: string[]): Promise<void> {
 		if (isMissingModule(err, '@rr/harness')) notImplemented('harness')
 		throw err
 	}
+}
+
+/** 解析 repeatable `--var name=value`（secret/变量驱动的 flow 回放用） */
+function parseVariables(raw: unknown): Record<string, string> | undefined {
+	const list = Array.isArray(raw) ? (raw as unknown[]) : raw === undefined ? [] : [raw]
+	const out: Record<string, string> = {}
+	for (const item of list) {
+		const text = String(item)
+		const eq = text.indexOf('=')
+		if (eq <= 0) usageError(`--var 需要 name=value 形式，收到 "${text}"`)
+		out[text.slice(0, eq)] = text.slice(eq + 1)
+	}
+	return Object.keys(out).length ? out : undefined
 }
 
 function parseViewport(value: string | undefined): { width: number; height: number } | undefined {

@@ -1,0 +1,1106 @@
+{
+  "schemaVersion": 1,
+  "id": "flow_mvxjdc7i_hsmd7c",
+  "title": "www.saucedemo.com",
+  "version": 1,
+  "createdAt": "2026-11-01T07:56:23.335Z",
+  "meta": {
+    "env": {
+      "startUrl": "https://www.saucedemo.com/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "dpr": 1
+    },
+    "recorder": {
+      "name": "@rr/recorder",
+      "version": "0.1.0"
+    }
+  },
+  "variables": [
+    {
+      "name": "password",
+      "type": "secret",
+      "secret": true,
+      "source": "input"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "Username",
+            "aria-label": "Username",
+            "data-test": "username",
+            "id": "user-name",
+            "type": "text",
+            "name": "user-name"
+          },
+          "rect": {
+            "x": 574,
+            "y": 154,
+            "width": 292,
+            "height": 37
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782149
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"username\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "Username",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#user-name",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"user-name\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "placeholder": "Username",
+            "aria-label": "Username",
+            "data-test": "username",
+            "id": "user-name",
+            "type": "text",
+            "name": "user-name"
+          },
+          "stableHash": "1ed26ede9d75fd51dd2a3b9c656de5aae6564f80",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #user-name（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "standard_user",
+      "clear": true
+    },
+    {
+      "id": "s2",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "Password",
+            "aria-label": "Password",
+            "data-test": "password",
+            "id": "password",
+            "type": "password",
+            "name": "password"
+          },
+          "rect": {
+            "x": 574,
+            "y": 206,
+            "width": 292,
+            "height": 37
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782171
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"password\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "Password",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#password",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"password\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "placeholder": "Password",
+            "aria-label": "Password",
+            "data-test": "password",
+            "id": "password",
+            "type": "password",
+            "name": "password"
+          },
+          "stableHash": "259ce4032ea05892fa2551fe99d1a588426afda7",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #password（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "{{password}}",
+      "clear": true
+    },
+    {
+      "id": "s3",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://www.saucedemo.com/inventory.html"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "data-test": "login-button",
+            "id": "login-button",
+            "type": "submit",
+            "name": "login-button"
+          },
+          "text": "Login",
+          "rect": {
+            "x": 574,
+            "y": 298,
+            "width": 292,
+            "height": 46
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782206
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"login-button\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#login-button",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"login-button\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[2]/*[1]/*[1]/*[1]/*[1]/*[4]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "data-test": "login-button",
+            "id": "login-button",
+            "type": "submit",
+            "name": "login-button"
+          },
+          "stableHash": "f2f0c823cc90721733217909246aaa1a994d4ef8",
+          "nodePath": [
+            1,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            3
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #login-button text=\"Login\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Login"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s4",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "data-test": "add-to-cart-sauce-labs-backpack",
+            "id": "add-to-cart-sauce-labs-backpack",
+            "name": "add-to-cart-sauce-labs-backpack"
+          },
+          "text": "Add to cart",
+          "rect": {
+            "x": 500,
+            "y": 339,
+            "width": 160,
+            "height": 34
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782267
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"add-to-cart-sauce-labs-backpack\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "Add to cart",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#add-to-cart-sauce-labs-backpack",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button[name=\"add-to-cart-sauce-labs-backpack\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "attrs": {
+            "data-test": "add-to-cart-sauce-labs-backpack",
+            "id": "add-to-cart-sauce-labs-backpack",
+            "name": "add-to-cart-sauce-labs-backpack"
+          },
+          "stableHash": "4f31189e8e3f889e2dcc57c8995bb5ddea5e59fc",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #add-to-cart-sauce-labs-backpack text=\"Add to cart\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "$29.99"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s5",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "data-test": "add-to-cart-sauce-labs-bike-light",
+            "id": "add-to-cart-sauce-labs-bike-light",
+            "name": "add-to-cart-sauce-labs-bike-light"
+          },
+          "text": "Add to cart",
+          "rect": {
+            "x": 1055,
+            "y": 339,
+            "width": 160,
+            "height": 34
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782303
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"add-to-cart-sauce-labs-bike-light\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "Add to cart",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#add-to-cart-sauce-labs-bike-light",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button[name=\"add-to-cart-sauce-labs-bike-light\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "attrs": {
+            "data-test": "add-to-cart-sauce-labs-bike-light",
+            "id": "add-to-cart-sauce-labs-bike-light",
+            "name": "add-to-cart-sauce-labs-bike-light"
+          },
+          "stableHash": "dfb3cb60c223a63f1c7968438efa3e742ffc5704",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #add-to-cart-sauce-labs-bike-light text=\"Add to cart\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "$9.99"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s6",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "a",
+          "attributes": {
+            "data-test": "shopping-cart-link",
+            "role": "button",
+            "aria-label": "Cart, 2 items"
+          },
+          "text": "2",
+          "rect": {
+            "x": 1380,
+            "y": 10,
+            "width": 40,
+            "height": 40
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782518
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"shopping-cart-link\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "role",
+            "value": {
+              "role": "button"
+            },
+            "score": 46,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "Cart, 2 items",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "2",
+            "score": 70,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "a",
+          "role": "button",
+          "attrs": {
+            "data-test": "shopping-cart-link",
+            "role": "button",
+            "aria-label": "Cart, 2 items"
+          },
+          "stableHash": "50cfe38dc7c77f77f5b6afa4bb8436ef72d27c38",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            2,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "a role=button text=\"2\"（元素在录制后被销毁，候选未经校验）"
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s7",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "data-test": "checkout",
+            "id": "checkout",
+            "name": "checkout"
+          },
+          "text": "Checkout",
+          "rect": {
+            "x": 1140,
+            "y": 586,
+            "width": 220,
+            "height": 34
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782568
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"checkout\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "Checkout",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#checkout",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button[name=\"checkout\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "attrs": {
+            "data-test": "checkout",
+            "id": "checkout",
+            "name": "checkout"
+          },
+          "stableHash": "fe22d473b96b1fe3d934be2b3cdf8bec63f35eda",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #checkout text=\"Checkout\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Continue Shopping"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s8",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "First Name",
+            "aria-label": "First Name",
+            "data-test": "firstName",
+            "id": "first-name",
+            "type": "text",
+            "name": "firstName"
+          },
+          "rect": {
+            "x": 530,
+            "y": 255,
+            "width": 380,
+            "height": 39
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782595
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"firstName\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "First Name",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#first-name",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"firstName\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "placeholder": "First Name",
+            "aria-label": "First Name",
+            "data-test": "firstName",
+            "id": "first-name",
+            "type": "text",
+            "name": "firstName"
+          },
+          "stableHash": "fedd34381964700bd75c2ad5fd30604b231daa97",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #first-name（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "Alice",
+      "clear": true
+    },
+    {
+      "id": "s9",
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "Last Name",
+            "aria-label": "Last Name",
+            "data-test": "lastName",
+            "id": "last-name",
+            "type": "text",
+            "name": "lastName"
+          },
+          "rect": {
+            "x": 530,
+            "y": 309,
+            "width": 380,
+            "height": 39
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782599
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"lastName\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "Last Name",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#last-name",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"lastName\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "placeholder": "Last Name",
+            "aria-label": "Last Name",
+            "data-test": "lastName",
+            "id": "last-name",
+            "type": "text",
+            "name": "lastName"
+          },
+          "stableHash": "06e626dd0fe66588d22fc73abc639d2b80a396c8",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #last-name（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "Demo",
+      "clear": true
+    },
+    {
+      "id": "s10",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://www.saucedemo.com/checkout-step-one.html"
+      },
+      "kind": "input",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "placeholder": "Zip/Postal Code",
+            "aria-label": "Zip/Postal Code",
+            "data-test": "postalCode",
+            "id": "postal-code",
+            "type": "text",
+            "name": "postalCode"
+          },
+          "rect": {
+            "x": 530,
+            "y": 363,
+            "width": 380,
+            "height": 39
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782602
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"postalCode\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "label",
+            "value": "Zip/Postal Code",
+            "score": 50,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#postal-code",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"postalCode\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "placeholder": "Zip/Postal Code",
+            "aria-label": "Zip/Postal Code",
+            "data-test": "postalCode",
+            "id": "postal-code",
+            "type": "text",
+            "name": "postalCode"
+          },
+          "stableHash": "d8b2daf486c46c9518c3db5cb3b76ba0ce0c0f3d",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            2,
+            0
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #postal-code（元素在录制后被销毁，候选未经校验）"
+      },
+      "value": "12345",
+      "clear": true
+    },
+    {
+      "id": "s11",
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "input",
+          "attributes": {
+            "data-test": "continue",
+            "id": "continue",
+            "type": "submit",
+            "name": "continue"
+          },
+          "text": "Continue",
+          "rect": {
+            "x": 1125,
+            "y": 599,
+            "width": 220,
+            "height": 41
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782634
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"continue\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#continue",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "input[name=\"continue\"]",
+            "score": 150,
+            "source": "record"
+          },
+          {
+            "kind": "xpath",
+            "value": "/html/*[2]/*[2]/*[1]/*[1]/*[2]/*[1]/*[1]/*[2]/*[2]",
+            "score": 900,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "input",
+          "attrs": {
+            "data-test": "continue",
+            "id": "continue",
+            "type": "submit",
+            "name": "continue"
+          },
+          "stableHash": "c44c89c3e803b085ed0d96e2f9419d3df7db4ea5",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "input #continue text=\"Continue\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Cancel"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    },
+    {
+      "id": "s12",
+      "expect": {
+        "kind": "urlChange",
+        "pattern": "https://www.saucedemo.com/checkout-complete.html"
+      },
+      "kind": "click",
+      "target": {
+        "observed": {
+          "tag": "button",
+          "attributes": {
+            "data-test": "finish",
+            "id": "finish",
+            "name": "finish"
+          },
+          "text": "Finish",
+          "rect": {
+            "x": 1140,
+            "y": 856,
+            "width": 220,
+            "height": 34
+          },
+          "scroll": {
+            "x": 0,
+            "y": 0
+          },
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "dpr": 1,
+          "recordedAt": 1793519782684
+        },
+        "candidates": [
+          {
+            "kind": "css",
+            "value": "[data-test=\"finish\"]",
+            "score": 12,
+            "source": "record"
+          },
+          {
+            "kind": "text",
+            "value": "Finish",
+            "score": 70,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "#finish",
+            "score": 100,
+            "source": "record"
+          },
+          {
+            "kind": "css",
+            "value": "button[name=\"finish\"]",
+            "score": 150,
+            "source": "record"
+          }
+        ],
+        "fingerprint": {
+          "tag": "button",
+          "attrs": {
+            "data-test": "finish",
+            "id": "finish",
+            "name": "finish"
+          },
+          "stableHash": "588812d6ea15782d0673c0a9008611691ecc8fcd",
+          "nodePath": [
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            8,
+            1
+          ]
+        },
+        "frame": {
+          "path": []
+        },
+        "description": "button #finish text=\"Finish\"（元素在录制后被销毁，候选未经校验）",
+        "nearbyText": [
+          "Cancel"
+        ]
+      },
+      "button": "left",
+      "clickCount": 1,
+      "modifiers": []
+    }
+  ],
+  "selfHealed": []
+}

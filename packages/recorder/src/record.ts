@@ -46,10 +46,21 @@ import {
 	snapshotPage,
 	validateCandidates,
 } from './capture-client.js'
+/**
+ * esbuild/tsx keepNames 垫片：页面内函数被 page.evaluate 序列化后，若函数体里带
+ * `__name(...)` 调用，页面里没有该全局就会 ReferenceError。纯字符串，不经过编译。
+ */
+const NAME_KEEPALIVE_SOURCE = 'globalThis.__name = globalThis.__name || ((fn) => fn); true'
 import { coalesceEvents } from './coalesce.js'
 import { buildElementRef, deriveCandidates } from './element.js'
 import { appearedNodes, inferExpect, pickExpectTarget, urlPattern } from './expect.js'
-import type { CoalescedAction, PageSignature, RawEvent, RecordOptions, RecordResult } from './types.js'
+import type {
+	CoalescedAction,
+	PageSignature,
+	RawEvent,
+	RecordOptions,
+	RecordResult,
+} from './types.js'
 
 const RECORDER_NAME = '@rr/recorder'
 const RECORDER_VERSION = '0.1.0'
@@ -116,6 +127,8 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 	const browser = await chromium.launch({ headless })
 	try {
 		const context = await browser.newContext({ viewport, deviceScaleFactor: 1 })
+		// keepNames 垫片：页面内采集/校验函数会经 page.evaluate 序列化，esbuild 注入的 __name 在页面里不存在
+		await context.addInitScript({ content: NAME_KEEPALIVE_SOURCE })
 		await installCapture(context, (frame, payload) => {
 			const event = normalizeEmitPayload(payload)
 			if (!event) return
@@ -165,8 +178,13 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 					selector: `[data-rr-uid="${uid}"]`,
 				})
 				if (!nodeId) return false
-				const described = await session.send('DOM.describeNode', { nodeId, depth: 1, pierce: false })
-				const roots = (described.node as { shadowRoots?: Array<{ shadowRootType?: string }> }).shadowRoots ?? []
+				const described = await session.send('DOM.describeNode', {
+					nodeId,
+					depth: 1,
+					pierce: false,
+				})
+				const roots =
+					(described.node as { shadowRoots?: Array<{ shadowRootType?: string }> }).shadowRoots ?? []
 				return roots.some((root) => root.shadowRootType === 'closed')
 			} catch {
 				// 文档切换 / 节点消失：重置缓存，下次重试
@@ -211,7 +229,8 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 				const closed = await hasClosedShadowRoot(uid)
 				if (closed) {
 					merged.shadowRootType = 'closed'
-					if (action.offset) merged.innerOffset = { x: round2(action.offset.x), y: round2(action.offset.y) }
+					if (action.offset)
+						merged.innerOffset = { x: round2(action.offset.x), y: round2(action.offset.y) }
 				}
 			}
 
@@ -245,7 +264,10 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 				crop,
 			})
 			if (validation !== 'ok') {
-				const note = validation === 'detached' ? '元素在录制后被销毁，候选未经校验' : '候选未能唯一命中，已保留启发式顺序'
+				const note =
+					validation === 'detached'
+						? '元素在录制后被销毁，候选未经校验'
+						: '候选未能唯一命中，已保留启发式顺序'
 				elementRef.description = `${elementRef.description ?? ''}（${note}）`.trim()
 			}
 			return elementRef
@@ -273,7 +295,10 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 				if (childUrl && childUrl !== 'about:blank')
 					path.push({ kind: 'urlPattern', pattern: urlPattern(childUrl) })
 				if (!anchor && (!childUrl || childUrl === 'about:blank'))
-					path.push({ kind: 'index', index: child.parentFrame()?.childFrames().indexOf(child) ?? 0 })
+					path.push({
+						kind: 'index',
+						index: child.parentFrame()?.childFrames().indexOf(child) ?? 0,
+					})
 			}
 			return { path }
 		}
@@ -343,7 +368,12 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 					if (!target) return undefined
 					const type = target.observed.attributes['type']?.toLowerCase()
 					if (action.masked || type === 'password') {
-						variables.set('password', { name: 'password', type: 'secret', secret: true, source: 'input' })
+						variables.set('password', {
+							name: 'password',
+							type: 'secret',
+							secret: true,
+							source: 'input',
+						})
 						return { kind: 'input', id, target, value: '{{password}}', clear: true }
 					}
 					return { kind: 'input', id, target, value: action.value ?? '', clear: true }
@@ -355,7 +385,12 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 						: action.value !== undefined
 							? [action.value]
 							: []
-					return { kind: 'select', id, target, value: values.length > 1 ? values : (values[0] ?? '') }
+					return {
+						kind: 'select',
+						id,
+						target,
+						value: values.length > 1 ? values : (values[0] ?? ''),
+					}
 				}
 				case 'key': {
 					const key = action.key ?? 'Enter'
@@ -372,7 +407,10 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 
 		/* ---------- expect 推断：把「新出现的元素」变回 ElementRef ---------- */
 
-		const takeExpect = async (before: PageSignature, after: PageSignature): Promise<Expect | undefined> => {
+		const takeExpect = async (
+			before: PageSignature,
+			after: PageSignature,
+		): Promise<Expect | undefined> => {
 			if (after.url !== before.url) return { kind: 'urlChange', pattern: urlPattern(after.url) }
 			const appeared = appearedNodes(before, after)
 			const picked = pickExpectTarget(appeared)
@@ -444,7 +482,10 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 		 * 导致 expect 归因错步、回放必然误报。用「下一个动作之前」既有明确语义，
 		 * 也不依赖动作有多快。
 		 */
-		const signatureAfterAction = (actions: CoalescedAction[], index: number): PageSignature | undefined => {
+		const signatureAfterAction = (
+			actions: CoalescedAction[],
+			index: number,
+		): PageSignature | undefined => {
 			const next = actions[index + 1]
 			if (next) {
 				let best: PageSignature | undefined
@@ -573,7 +614,9 @@ export async function record(opts: RecordOptions): Promise<RecordResult> {
 
 		if (driveError) {
 			// 半截录制不落盘：调用方要的是完整可回放的 flow，不是错位的半截
-			throw new Error(`drive 回调失败，录制中止（已采集 ${steps.length} 步，未写盘）：${driveError.message}`)
+			throw new Error(
+				`drive 回调失败，录制中止（已采集 ${steps.length} 步，未写盘）：${driveError.message}`,
+			)
 		}
 		if (!steps.length) {
 			throw new Error(

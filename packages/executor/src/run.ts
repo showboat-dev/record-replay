@@ -21,7 +21,7 @@ import {
 } from './selfheal.js'
 import { flattenSteps } from './steps.js'
 import { defaultVariables, renderStep } from './template.js'
-import { rebaseUrl } from './url.js'
+import { NAME_KEEPALIVE_SOURCE, rebaseUrl } from './url.js'
 import { runAssertion, sleep, verifyExpect, type VerifyDeps } from './verify.js'
 import type {
 	PlayOptions,
@@ -138,7 +138,10 @@ async function readMutationCount(page: Page): Promise<number> {
 		.catch(() => 0)
 }
 
-export async function executeRun(opts: PlayOptions, runId: string = makeId('run')): Promise<RunOutcome> {
+export async function executeRun(
+	opts: PlayOptions,
+	runId: string = makeId('run'),
+): Promise<RunOutcome> {
 	const flow: Flow = opts.flow
 	const timeoutMs = opts.timeoutMs ?? 15_000
 	const screenshotMode = opts.screenshotMode ?? 'failures'
@@ -178,6 +181,9 @@ export async function executeRun(opts: PlayOptions, runId: string = makeId('run'
 			...(env.timezone ? { timezoneId: env.timezone } : {}),
 			...(env.userAgent ? { userAgent: env.userAgent } : {}),
 		})
+		// keepNames 垫片：resolver/executor 里有函数被 page.evaluate 序列化进页面，
+		// esbuild/tsx 注入的 __name(...) 在页面里不存在会导致 ReferenceError（真实站点 L2 挂掉的根因）
+		await context.addInitScript({ content: NAME_KEEPALIVE_SOURCE })
 		const page = await context.newPage()
 		page.setDefaultTimeout(timeoutMs)
 
@@ -377,11 +383,7 @@ export async function executeRun(opts: PlayOptions, runId: string = makeId('run'
 						{ kind: 'assert' }
 					>
 					stepLogPush(`assert ${rendered.assertion.kind}`)
-					const note = await runAssertion(
-						verifyDeps,
-						rendered.assertion,
-						rendered.target,
-					)
+					const note = await runAssertion(verifyDeps, rendered.assertion, rendered.target)
 					expectNote = `assert ${note}`
 					stepLogPush(`assert ✓ ${note}`)
 				} else {
@@ -400,7 +402,8 @@ export async function executeRun(opts: PlayOptions, runId: string = makeId('run'
 						throw new StepFailure('NOT_ACTIONABLE', 'group 步骤不应直接执行（应由 flatten 展开）')
 					}
 					phase = rendered.kind === 'navigate' ? 'navigate' : 'action'
-					const probeNeeded = !rendered.expect && (rendered.kind === 'click' || rendered.kind === 'drag')
+					const probeNeeded =
+						!rendered.expect && (rendered.kind === 'click' || rendered.kind === 'drag')
 					if (probeNeeded) await armMutationProbe(page)
 
 					const action = await runAction(actionDeps, rendered)
@@ -413,11 +416,12 @@ export async function executeRun(opts: PlayOptions, runId: string = makeId('run'
 					// L4 自愈命中：记录 + 现场生成候选（写回时用）
 					const pendingRepair = pendingRepairRef.current
 					if (detail.level === 'L4' && pendingRepair) {
-						const usedValues = 'target' in rendered && rendered.target
-							? rendered.target.candidates.map((c) =>
-									typeof c.value === 'string' ? c.value : `${c.value.role}:${c.value.name ?? ''}`,
-								)
-							: []
+						const usedValues =
+							'target' in rendered && rendered.target
+								? rendered.target.candidates.map((c) =>
+										typeof c.value === 'string' ? c.value : `${c.value.role}:${c.value.name ?? ''}`,
+									)
+								: []
 						const candidate = pickCandidateFromFacts(pendingRepair.facts, usedValues)
 						const from =
 							'target' in rendered && rendered.target?.candidates[0]

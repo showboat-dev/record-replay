@@ -67,10 +67,7 @@ export function isDynamicValue(value: string): boolean {
 }
 
 /** 是否属于指纹属性（录制侧与回放侧共用同一判定） */
-export function isStableAttr(
-	name: string,
-	policy: StableAttrPolicy = STABLE_ATTR_POLICY,
-): boolean {
+export function isStableAttr(name: string, policy: StableAttrPolicy = STABLE_ATTR_POLICY): boolean {
 	const lower = name.toLowerCase()
 	if (lower.startsWith('data-rr-')) return false // 自己打的标记不参与指纹
 	if (policy.denyExact.includes(lower)) return false
@@ -118,7 +115,9 @@ export function canonicalHashInput(input: HashInput): string {
 		.map((key) => `${key}=${input.attrs[key]}`)
 		.join('&')
 	const pathPart = (input.nodePath ?? []).join('.')
-	return [input.tag, input.role ?? '', input.accessibleName ?? '', attrPart, pathPart].join('\u0000')
+	return [input.tag, input.role ?? '', input.accessibleName ?? '', attrPart, pathPart].join(
+		'\u0000',
+	)
 }
 
 export function computeStableHash(input: HashInput): string {
@@ -181,18 +180,17 @@ export interface InPageCollectArg {
  * nodePath 语义与 recorder/capture/capture.js 的 nodePathOf 一致：
  * documentElement 之下的 children 索引链（不含 html 自身），最多 64 层。
  */
+/**
+ * esbuild/tsx 的 keepNames 会在函数体里注入 `__name(fn, "name")` 调用；
+ * 这个函数被 `page.evaluate` 序列化进页面时，页面里没有 `__name` 就会
+ * `ReferenceError: __name is not defined`（真实站点 L2 全挂的根因）。
+ * 回放/录制前注入这个全局垫片即可，纯字符串、不经过编译。
+ */
+export const NAME_KEEPALIVE_SOURCE = 'globalThis.__name = globalThis.__name || ((fn) => fn); true'
+
 export function collectFingerprintCandidates(arg: InPageCollectArg): InPageCandidate[] {
 	const policy = arg.policy
-	const skipTags = [
-		'script',
-		'style',
-		'head',
-		'meta',
-		'link',
-		'noscript',
-		'template',
-		'html',
-	]
+	const skipTags = ['script', 'style', 'head', 'meta', 'link', 'noscript', 'template', 'html']
 	const normalize = (value: string | null | undefined): string =>
 		(value ?? '').replace(/\s+/g, ' ').trim()
 
@@ -259,7 +257,14 @@ export function collectFingerprintCandidates(arg: InPageCollectArg): InPageCandi
 		if (tag === 'option') return 'option'
 		if (tag === 'li') return 'listitem'
 		if (tag === 'ul' || tag === 'ol') return 'list'
-		if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6')
+		if (
+			tag === 'h1' ||
+			tag === 'h2' ||
+			tag === 'h3' ||
+			tag === 'h4' ||
+			tag === 'h5' ||
+			tag === 'h6'
+		)
 			return 'heading'
 		if (tag === 'table') return 'table'
 		if (tag === 'tr') return 'row'

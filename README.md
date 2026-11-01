@@ -65,6 +65,20 @@ P50 93ms / P95 354ms
 已录 flow：`basic` / `iframe-same` / `shadow-closed` / `controlled` / `custom-select` / `spa`。
 待补：`iframe-cross` / `canvas`（需要坐标） / `virtual-list` / `upload-download` / `dialog` → M2。
 
+## 真实站点验证（SauceDemo 完整下单链路）
+
+`flows/public-saucedemo.json`：**12 步**（登录 → 加购 2 件 → 购物车 → 结算 → 填收货信息 → 完成），密码自动转成 `{{password}}` secret 变量。
+
+| 验证 | 结果 |
+|---|---|
+| `pnpm rr play flows/public-saucedemo.json --runs 10 --var password=secret_sauce` | **10/10 次通过**，12/12 步，单次 ≈1.55s |
+| `RR_VAR_password=... pnpm rr harness --sites public --runs 3` | **3/3 通过**，36 步全部 L1，P50 89ms / P95 192ms |
+| 破坏版（把所有语义候选替换成不存在的 css，强制降级） | **2/2 通过**，12/12 步全部由 L2 指纹接管 |
+
+> 真实站点测试顺带抓到一个**只在 tsx 运行时才暴露的 bug**：esbuild `keepNames` 会在函数体里注入
+> `__name(...)`，函数被 `page.evaluate` 序列化进页面后抛 `__name is not defined`，导致 L2 全挂。
+> 已在 resolver/executor/recorder 三处注入页面级垫片修复（`NAME_KEEPALIVE_SOURCE`）。
+
 ## 下一步（M2）
 
 1. 补齐 11 条本地 flow（canvas 用 `click.position`、upload 用 `setInputFiles`、dialog 用 dialog 策略）

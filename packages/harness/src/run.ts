@@ -119,7 +119,9 @@ export async function runHarness(opts: RunHarnessOptions): Promise<HarnessReport
 	const rootDir = opts.rootDir ?? REPO_ROOT
 	const runs = normalizeRunCount(opts.runs)
 	const started = deps.now()
-	const artifactsRoot = opts.artifactsRoot ? resolve(opts.artifactsRoot) : join(rootDir, 'artifacts')
+	const artifactsRoot = opts.artifactsRoot
+		? resolve(opts.artifactsRoot)
+		: join(rootDir, 'artifacts')
 	const outDir = join(artifactsRoot, `${HARNESS_DIR_PREFIX}${formatStamp(started)}`)
 
 	const sites = opts.sites ?? []
@@ -163,6 +165,11 @@ export async function runHarness(opts: RunHarnessOptions): Promise<HarnessReport
 				ai: opts.ai ?? null,
 				// flow 录制时的 origin 可能与当前回放环境不同（端口/环境切换）：按站点 url 重定基
 				...(site.url ? { baseUrl: site.url } : {}),
+				// public 站的 flow 常带 secret 变量（如 {{password}}）：从 RR_VAR_<name> 环境变量注入
+				...(() => {
+					const variables = collectEnvVariables()
+					return Object.keys(variables).length ? { variables } : {}
+				})(),
 			})
 			if (!Array.isArray(results) || results.length === 0) {
 				throw new Error('playRuns 没有返回任何结果（executor 尚未实现？）')
@@ -212,4 +219,15 @@ export async function runHarness(opts: RunHarnessOptions): Promise<HarnessReport
 	await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
 	emit(opts.onProgress, { type: 'report', path: reportPath })
 	return report
+}
+
+/** 从 `RR_VAR_<name>` 环境变量收集 flow 变量（public 站回放用，避免把 secret 写进仓库） */
+export function collectEnvVariables(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
+	const out: Record<string, string> = {}
+	for (const [key, value] of Object.entries(env)) {
+		if (!key.startsWith('RR_VAR_') || value === undefined) continue
+		const name = key.slice('RR_VAR_'.length)
+		if (name) out[name] = value
+	}
+	return out
 }

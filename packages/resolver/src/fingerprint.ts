@@ -21,6 +21,7 @@ import { ElementNotFoundError } from './errors.js'
 import {
 	collectFingerprintCandidates,
 	computeStableHash,
+	NAME_KEEPALIVE_SOURCE,
 	removeFingerprintMarkers,
 	STABLE_ATTR_POLICY,
 	type InPageCandidate,
@@ -62,6 +63,8 @@ export async function resolveL2(
 	}
 
 	try {
+		// 兜底：调用方（executor/recorder/自研脚本）可能没装垫片；字符串形式不会经过 keepNames 转换
+		await scope.evaluate(NAME_KEEPALIVE_SOURCE).catch(() => undefined)
 		candidates = await scope.evaluate(collectFingerprintCandidates, {
 			policy: STABLE_ATTR_POLICY,
 			tag: fingerprint.tag,
