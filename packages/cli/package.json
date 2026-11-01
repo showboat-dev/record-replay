@@ -1,0 +1,8 @@
+{
+  "name": "@rr/cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "command line interface",
+  "exports": { ".": "./src/index.ts" }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@rr/executor",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "action execution + verify",
+  "exports": { ".": "./src/index.ts" }
+}

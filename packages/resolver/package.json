@@ -1,0 +1,8 @@
+{
+  "name": "@rr/resolver",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "element resolution ladder",
+  "exports": { ".": "./src/index.ts" }
+}
